@@ -107,8 +107,11 @@ class CategoriesFragment : Fragment() {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
                         setPadding(16, 16, 16, 16)
-                        background =
-                            resources.getDrawable(android.R.drawable.dialog_holo_light_frame)
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            setColor(Color.parseColor("#1A1F2B"))
+                            cornerRadius = 28f
+                            setStroke(1, Color.parseColor("#2B3140"))
+                        }
 
                         setOnClickListener {
 
@@ -138,7 +141,7 @@ class CategoriesFragment : Fragment() {
                     val name = TextView(requireContext()).apply {
                         text = app.name
                         textSize = 12f
-                        setTextColor(Color.WHITE)
+                        setTextColor(Color.parseColor("#E5E7EB"))
                         gravity = Gravity.CENTER
                         setPadding(0, 16, 0, 0)
                     }
