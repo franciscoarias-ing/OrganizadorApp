@@ -75,7 +75,7 @@ class CategoriesFragment : Fragment() {
             textSize = 15f
             setHintTextColor(Color.parseColor("#777E8C"))
             setTextColor(Color.WHITE)
-            singleLine = true
+            setSingleLine(true)
             setPadding(28, 0, 28, 0)
             background = roundedBox("#1A1F2B", "#2B3140", 24f)
 
