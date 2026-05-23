@@ -8,7 +8,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-
 class CategoryFolderAdapter(
     private val categories: List<AppCategory>,
     private val onCategoryClick: (AppCategory) -> Unit
@@ -25,29 +24,25 @@ class CategoryFolderAdapter(
             isClickable = true
             isFocusable = true
 
-            // Folder más grande y premium, como la imagen objetivo.
+            // Sin fondo externo.
+            background = null
+
             setPadding(
-                AppUiUtils.dp(context, 14),
-                AppUiUtils.dp(context, 16),
-                AppUiUtils.dp(context, 14),
-                AppUiUtils.dp(context, 16)
+                AppUiUtils.dp(context, 2),
+                AppUiUtils.dp(context, 2),
+                AppUiUtils.dp(context, 2),
+                AppUiUtils.dp(context, 2)
             )
 
-            background = GradientDrawable().apply {
-                setColor(UiConstants.SURFACE)
-                cornerRadius = AppUiUtils.dp(context, 22).toFloat()
-                setStroke(1, UiConstants.BORDER)
-            }
-
             layoutParams = ViewGroup.MarginLayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(context, 168)
+                AppUiUtils.dp(context, 76),
+                ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
                 setMargins(
-                    AppUiUtils.dp(context, 7),
-                    AppUiUtils.dp(context, 7),
-                    AppUiUtils.dp(context, 7),
-                    AppUiUtils.dp(context, 10)
+                    AppUiUtils.dp(context, 2),
+                    0,
+                    AppUiUtils.dp(context, 8),
+                    0
                 )
             }
         }
@@ -70,54 +65,45 @@ class CategoryFolderAdapter(
         val iconGrid = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(UiConstants.SURFACE_ALT)
-                cornerRadius = AppUiUtils.dp(context, 20).toFloat()
-            }
-            setPadding(
-                AppUiUtils.dp(context, 10),
-                AppUiUtils.dp(context, 10),
-                AppUiUtils.dp(context, 10),
-                AppUiUtils.dp(context, 10)
-            )
+
+            // Sin fondo interno. Esto elimina el bloque oscuro detrás de los íconos.
+            background = null
+
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 88),
-                AppUiUtils.dp(context, 88)
+                AppUiUtils.dp(context, 52),
+                AppUiUtils.dp(context, 52)
             )
-        }
-
-        val row1 = LinearLayout(context).apply {
-            gravity = Gravity.CENTER
-        }
-
-        val row2 = LinearLayout(context).apply {
-            gravity = Gravity.CENTER
         }
 
         if (category.name == "Todas las apps") {
-            repeat(9) {
-                row1.addView(dot(context))
-                if (it == 2) {
-                    iconGrid.addView(row1)
-                }
-            }
-            repeat(6) {
-                row2.addView(dot(context))
-            }
+            val row1 = LinearLayout(context).apply { gravity = Gravity.CENTER }
+            val row2 = LinearLayout(context).apply { gravity = Gravity.CENTER }
+            val row3 = LinearLayout(context).apply { gravity = Gravity.CENTER }
+
+            repeat(3) { row1.addView(dot(context)) }
+            repeat(3) { row2.addView(dot(context)) }
+            repeat(3) { row3.addView(dot(context)) }
+
+            iconGrid.addView(row1)
             iconGrid.addView(row2)
+            iconGrid.addView(row3)
         } else {
+            val row1 = LinearLayout(context).apply { gravity = Gravity.CENTER }
+            val row2 = LinearLayout(context).apply { gravity = Gravity.CENTER }
+
             category.apps.take(4).forEachIndexed { index, app ->
                 val icon = ImageView(context).apply {
                     setImageDrawable(app.icon)
+
                     layoutParams = LinearLayout.LayoutParams(
-                        AppUiUtils.dp(context, 30),
-                        AppUiUtils.dp(context, 30)
+                        AppUiUtils.dp(context, 22),
+                        AppUiUtils.dp(context, 22)
                     ).apply {
                         setMargins(
-                            AppUiUtils.dp(context, 4),
-                            AppUiUtils.dp(context, 4),
-                            AppUiUtils.dp(context, 4),
-                            AppUiUtils.dp(context, 4)
+                            AppUiUtils.dp(context, 2),
+                            AppUiUtils.dp(context, 2),
+                            AppUiUtils.dp(context, 2),
+                            AppUiUtils.dp(context, 2)
                         )
                     }
                 }
@@ -133,34 +119,36 @@ class CategoryFolderAdapter(
 
         holder.layout.addView(TextView(context).apply {
             text = category.name
-            textSize = 16f
+            textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(UiConstants.TEXT_PRIMARY)
             gravity = Gravity.CENTER
             includeFontPadding = false
             maxLines = 1
-            setPadding(0, AppUiUtils.dp(context, 14), 0, 0)
+            setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
         })
 
         holder.layout.addView(TextView(context).apply {
             text = "${category.apps.size} apps"
-            textSize = 13f
+            textSize = 9f
             setTextColor(UiConstants.TEXT_SECONDARY)
             gravity = Gravity.CENTER
             includeFontPadding = false
-            setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
+            maxLines = 1
+            setPadding(0, AppUiUtils.dp(context, 2), 0, 0)
         })
     }
 
     private fun dot(context: android.content.Context): TextView {
         return TextView(context).apply {
             text = "●"
-            textSize = 14f
+            textSize = 8f
             setTextColor(UiConstants.ACCENT)
             gravity = Gravity.CENTER
+
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 18),
-                AppUiUtils.dp(context, 18)
+                AppUiUtils.dp(context, 11),
+                AppUiUtils.dp(context, 11)
             )
         }
     }

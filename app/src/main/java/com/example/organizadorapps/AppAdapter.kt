@@ -27,36 +27,42 @@ class AppAdapter(
         val context = parent.context
 
         val card = LinearLayout(context).apply {
-            orientation = if (mode == Mode.RECENT) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             isClickable = true
             isFocusable = true
-            background = AppUiUtils.roundedCard()
+
+            // Solo GRID mantiene card. RECENT y FAVORITE quedan minimalistas.
+            background = if (mode == Mode.GRID) {
+                AppUiUtils.roundedCard()
+            } else {
+                null
+            }
 
             val width = when (mode) {
-                Mode.RECENT -> AppUiUtils.dp(context, 156)
-                Mode.FAVORITE -> AppUiUtils.dp(context, 82)
+                Mode.RECENT -> AppUiUtils.dp(context, 72)
+                Mode.FAVORITE -> AppUiUtils.dp(context, 72)
                 Mode.GRID -> AppUiUtils.dp(context, 148)
             }
 
             val height = when (mode) {
-                Mode.RECENT -> AppUiUtils.dp(context, 72)
-                Mode.FAVORITE -> AppUiUtils.dp(context, 104)
+                Mode.RECENT -> LinearLayout.LayoutParams.WRAP_CONTENT
+                Mode.FAVORITE -> LinearLayout.LayoutParams.WRAP_CONTENT
                 Mode.GRID -> AppUiUtils.dp(context, 168)
             }
 
             setPadding(
-                AppUiUtils.dp(context, 10),
-                AppUiUtils.dp(context, 10),
-                AppUiUtils.dp(context, 10),
-                AppUiUtils.dp(context, 10)
+                AppUiUtils.dp(context, 3),
+                AppUiUtils.dp(context, 3),
+                AppUiUtils.dp(context, 3),
+                AppUiUtils.dp(context, 3)
             )
 
             layoutParams = ViewGroup.MarginLayoutParams(width, height).apply {
                 setMargins(
                     AppUiUtils.dp(context, 4),
                     AppUiUtils.dp(context, 4),
-                    AppUiUtils.dp(context, 8),
+                    AppUiUtils.dp(context, 16),
                     AppUiUtils.dp(context, 4)
                 )
             }
@@ -71,7 +77,15 @@ class AppAdapter(
         val isFavorite = FavoritesManager.isFavorite(context, app.packageName)
 
         holder.layout.removeAllViews()
-        holder.layout.background = if (isFavorite) AppUiUtils.favoriteCard() else AppUiUtils.roundedCard()
+
+        holder.layout.background = when (mode) {
+            Mode.GRID -> {
+                if (isFavorite) AppUiUtils.favoriteCard() else AppUiUtils.roundedCard()
+            }
+
+            Mode.RECENT,
+            Mode.FAVORITE -> null
+        }
 
         holder.layout.setOnClickListener {
             RecentAppsManager.registerAppOpen(context, app)
@@ -107,33 +121,20 @@ class AppAdapter(
         holder.layout.addView(ImageView(context).apply {
             setImageDrawable(app.icon)
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 42),
-                AppUiUtils.dp(context, 42)
-            ).apply {
-                marginEnd = AppUiUtils.dp(context, 10)
-            }
+                AppUiUtils.dp(context, 50),
+                AppUiUtils.dp(context, 50)
+            )
         })
 
-        holder.layout.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-
-            addView(TextView(context).apply {
-                text = app.name
-                textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(UiConstants.TEXT_PRIMARY)
-                includeFontPadding = false
-                maxLines = 1
-            })
-
-            addView(TextView(context).apply {
-                text = "Reciente"
-                textSize = 12f
-                setTextColor(UiConstants.TEXT_SECONDARY)
-                includeFontPadding = false
-                setPadding(0, AppUiUtils.dp(context, 4), 0, 0)
-            })
+        holder.layout.addView(TextView(context).apply {
+            text = app.name
+            textSize = 11f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(UiConstants.TEXT_PRIMARY)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            maxLines = 1
+            setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
         })
     }
 
@@ -143,19 +144,19 @@ class AppAdapter(
         holder.layout.addView(ImageView(context).apply {
             setImageDrawable(app.icon)
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 54),
-                AppUiUtils.dp(context, 54)
+                AppUiUtils.dp(context, 52),
+                AppUiUtils.dp(context, 52)
             )
         })
 
         holder.layout.addView(TextView(context).apply {
             text = app.name
-            textSize = 12f
+            textSize = 11f
             setTextColor(UiConstants.TEXT_PRIMARY)
             gravity = Gravity.CENTER
             includeFontPadding = false
             maxLines = 1
-            setPadding(0, AppUiUtils.dp(context, 8), 0, 0)
+            setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
         })
     }
 

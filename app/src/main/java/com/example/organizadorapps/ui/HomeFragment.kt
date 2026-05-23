@@ -234,8 +234,11 @@ class HomeFragment : Fragment() {
 
         root.addView(
             RecyclerView(requireContext()).apply {
-                // Cambio clave: 2 columnas, no 3.
-                layoutManager = GridLayoutManager(requireContext(), 2)
+                layoutManager = LinearLayoutManager(
+                    requireContext(),
+                    LinearLayoutManager.HORIZONTAL,
+                    false
+                )
 
                 adapter = CategoryFolderAdapter(categories) { category ->
                     if (category.name == "Todas las apps") {
@@ -250,7 +253,7 @@ class HomeFragment : Fragment() {
 
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+                    AppUiUtils.dp(requireContext(), 118)
                 )
             }
         )
