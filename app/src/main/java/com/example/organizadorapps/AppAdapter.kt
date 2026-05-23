@@ -23,12 +23,12 @@ class AppAdapter(
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(14, 14, 14, 14)
+            setPadding(12, 12, 12, 12)
             background = cardBackground(false)
             isClickable = true
             isFocusable = true
 
-            layoutParams = ViewGroup.MarginLayoutParams(178, 215).apply {
+            layoutParams = ViewGroup.MarginLayoutParams(170, 205).apply {
                 setMargins(8, 8, 8, 8)
             }
         }
@@ -45,6 +45,8 @@ class AppAdapter(
         holder.layout.background = cardBackground(isFavorite)
 
         holder.layout.setOnClickListener {
+            RecentAppsManager.registerAppOpen(context, app)
+
             holder.layout.animate()
                 .scaleX(0.96f)
                 .scaleY(0.96f)
@@ -89,7 +91,7 @@ class AppAdapter(
 
         holder.layout.addView(ImageView(context).apply {
             setImageDrawable(app.icon)
-            layoutParams = LinearLayout.LayoutParams(76, 76)
+            layoutParams = LinearLayout.LayoutParams(72, 72)
         })
 
         holder.layout.addView(TextView(context).apply {
@@ -98,7 +100,7 @@ class AppAdapter(
             typeface = if (isFavorite) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
             setTextColor(Color.parseColor("#E5E7EB"))
             gravity = Gravity.CENTER
-            setPadding(0, 12, 0, 0)
+            setPadding(0, 10, 0, 0)
             maxLines = 2
         })
     }
@@ -108,7 +110,7 @@ class AppAdapter(
     private fun cardBackground(isFavorite: Boolean): GradientDrawable {
         return GradientDrawable().apply {
             setColor(Color.parseColor(if (isFavorite) "#252D3D" else "#1A1F2B"))
-            cornerRadius = 26f
+            cornerRadius = 24f
             setStroke(
                 if (isFavorite) 2 else 1,
                 Color.parseColor(if (isFavorite) "#D6A84F" else "#2B3140")
