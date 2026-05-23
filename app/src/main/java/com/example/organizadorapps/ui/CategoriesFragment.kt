@@ -11,26 +11,39 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import com.example.organizadorapps.AppCategory
+import com.example.organizadorapps.AppLauncher
 import com.example.organizadorapps.CategoryRules
 import com.example.organizadorapps.InstalledApp
 
 class CategoriesFragment : Fragment() {
+
+    private lateinit var layout: LinearLayout
+    private lateinit var allApps: List<InstalledApp>
 
     override fun onCreateView(
         inflater: android.view.LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val apps = getInstalledLaunchableApps()
+        allApps = getInstalledLaunchableApps()
 
         val rootScroll = ScrollView(requireContext()).apply {
             setBackgroundColor(Color.parseColor("#0F1115"))
         }
 
-        val layout = LinearLayout(requireContext()).apply {
+        layout = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 48, 32, 48)
         }
+
+        renderContent(allApps)
+
+        rootScroll.addView(layout)
+        return rootScroll
+    }
+
+    private fun renderContent(apps: List<InstalledApp>) {
+        layout.removeAllViews()
 
         layout.addView(TextView(requireContext()).apply {
             text = "Categorías"
@@ -42,10 +55,62 @@ class CategoriesFragment : Fragment() {
             text = "${apps.size} apps detectadas"
             textSize = 14f
             setTextColor(Color.parseColor("#9AA0A6"))
-            setPadding(0, 8, 0, 32)
+            setPadding(0, 8, 0, 24)
         })
 
-        val categories = CategoryRules.rules.map { rule ->
+        layout.addView(searchBox())
+
+        val categories = buildCategories(apps)
+
+        categories.forEach { category ->
+            if (category.apps.isNotEmpty()) {
+                addCategorySection(category)
+            }
+        }
+    }
+
+    private fun searchBox(): EditText {
+        return EditText(requireContext()).apply {
+            hint = "Buscar apps..."
+            textSize = 15f
+            setHintTextColor(Color.parseColor("#777E8C"))
+            setTextColor(Color.WHITE)
+            singleLine = true
+            setPadding(28, 0, 28, 0)
+            background = roundedBox("#1A1F2B", "#2B3140", 24f)
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                96
+            ).apply {
+                setMargins(0, 0, 0, 24)
+            }
+
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val query = s.toString().trim().lowercase()
+
+                    val filteredApps = if (query.isEmpty()) {
+                        allApps
+                    } else {
+                        allApps.filter {
+                            it.name.lowercase().contains(query) ||
+                                    it.packageName.lowercase().contains(query)
+                        }
+                    }
+
+                    renderContent(filteredApps)
+                }
+
+                override fun afterTextChanged(s: android.text.Editable?) {}
+            })
+        }
+    }
+
+    private fun buildCategories(apps: List<InstalledApp>): List<AppCategory> {
+        val ruleCategories = CategoryRules.rules.map { rule ->
             AppCategory(
                 rule.key,
                 apps.filter { app ->
@@ -55,17 +120,10 @@ class CategoriesFragment : Fragment() {
             )
         }
 
-        categories.forEach { category ->
-            if (category.apps.isNotEmpty()) {
-                addCategorySection(layout, category)
-            }
-        }
-
-        rootScroll.addView(layout)
-        return rootScroll
+        return ruleCategories + AppCategory("Todas las apps", apps)
     }
 
-    private fun addCategorySection(layout: LinearLayout, category: AppCategory) {
+    private fun addCategorySection(category: AppCategory) {
         layout.addView(TextView(requireContext()).apply {
             text = category.name
             textSize = 20f
@@ -89,23 +147,12 @@ class CategoriesFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(16, 16, 16, 16)
-            background = roundedCard()
+            background = roundedBox("#1A1F2B", "#2B3140", 28f)
             isClickable = true
             isFocusable = true
 
             setOnClickListener {
-                val launchIntent =
-                    requireContext().packageManager.getLaunchIntentForPackage(app.packageName)
-
-                if (launchIntent != null) {
-                    startActivity(launchIntent)
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "No se pudo abrir ${app.name}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                AppLauncher.openApp(requireContext(), app.packageName, app.name)
             }
         }
 
@@ -126,16 +173,17 @@ class CategoriesFragment : Fragment() {
             setTextColor(Color.parseColor("#E5E7EB"))
             gravity = Gravity.CENTER
             setPadding(0, 16, 0, 0)
+            maxLines = 2
         })
 
         return card
     }
 
-    private fun roundedCard(): GradientDrawable {
+    private fun roundedBox(bgColor: String, strokeColor: String, radius: Float): GradientDrawable {
         return GradientDrawable().apply {
-            setColor(Color.parseColor("#1A1F2B"))
-            cornerRadius = 28f
-            setStroke(1, Color.parseColor("#2B3140"))
+            setColor(Color.parseColor(bgColor))
+            cornerRadius = radius
+            setStroke(1, Color.parseColor(strokeColor))
         }
     }
 
@@ -155,6 +203,6 @@ class CategoriesFragment : Fragment() {
                 )
             }
             .distinctBy { it.packageName }
-            .sortedBy { it.name }
+            .sortedBy { it.name.lowercase() }
     }
 }
