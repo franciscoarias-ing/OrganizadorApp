@@ -32,7 +32,8 @@
             android:includeFontPadding="false"
             android:maxLines="1"
             android:textColor="#F4F7FB"
-            android:textSize="13sp" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/txtCategoryCount"
@@ -44,23 +45,6 @@
             android:textColor="#9CA3AF"
             android:textSize="11sp" />
 
-        <TextView
-            android:id="@+id/txtExpandArrow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:includeFontPadding="false"
-            android:text="⌄"
-            android:textColor="#8B5CF6"
-            android:textSize="15sp" />
-
     </LinearLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerExpandedApps"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:visibility="gone" />
 
 </LinearLayout>

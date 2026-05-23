@@ -1,5 +1,5 @@
 package com.example.organizadorapps.ui
-
+import com.example.organizadorapps.CategoryGridItem
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -268,8 +268,15 @@ class HomeFragment : Fragment() {
         root: LinearLayout,
         categories: MutableList<ExpandableCategoryItem>
     ) {
+
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 24, 12) {
+            AppUiUtils.sectionRow(
+                requireContext(),
+                "Mis categorías",
+                "Editar",
+                24,
+                12
+            ) {
                 Toast.makeText(
                     requireContext(),
                     "Edición de categorías próximamente",
@@ -280,48 +287,126 @@ class HomeFragment : Fragment() {
 
         val categoryRecycler = RecyclerView(requireContext())
 
-        val gridLayoutManager = GridLayoutManager(requireContext(), 4)
+        fun buildGridItems(): MutableList<CategoryGridItem> {
 
-        gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-            override fun getSpanSize(position: Int): Int {
-                return if (categories[position].isExpanded) {
-                    4
-                } else {
-                    1
+            val result = mutableListOf<CategoryGridItem>()
+
+            categories.forEach { category ->
+
+                result.add(
+                    CategoryGridItem.Folder(category)
+                )
+
+                if (category.isExpanded) {
+                    result.add(
+                        CategoryGridItem.ExpandedPanel(category)
+                    )
                 }
             }
+
+            return result
         }
 
+        var gridItems = buildGridItems()
+
+        val gridLayoutManager = GridLayoutManager(requireContext(), 4)
+
+        gridLayoutManager.spanSizeLookup =
+            object : GridLayoutManager.SpanSizeLookup() {
+
+                override fun getSpanSize(position: Int): Int {
+
+                    return when (gridItems[position]) {
+
+                        is CategoryGridItem.ExpandedPanel -> 4
+
+                        else -> 1
+                    }
+                }
+            }
+
+        lateinit var adapter: CategoryFolderAdapter
+
+        adapter = CategoryFolderAdapter(
+            items = gridItems,
+
+            onFolderClick = { clickedItem ->
+
+                categories.forEach { category ->
+                    category.isExpanded = false
+                }
+
+                clickedItem.isExpanded = true
+
+                gridItems = buildGridItems()
+
+                categoryRecycler.post {
+                    categoryRecycler.adapter =
+                        CategoryFolderAdapter(
+                            items = gridItems,
+
+                            onFolderClick = adapter.onFolderClick,
+
+                            onCollapseClick = adapter.onCollapseClick,
+
+                            onAppClick = adapter.onAppClick,
+
+                            onAllAppsClick = adapter.onAllAppsClick
+                        )
+                }
+            },
+
+            onCollapseClick = {
+
+                categories.forEach {
+                    it.isExpanded = false
+                }
+
+                gridItems = buildGridItems()
+
+                categoryRecycler.post {
+                    categoryRecycler.adapter =
+                        CategoryFolderAdapter(
+                            items = gridItems,
+
+                            onFolderClick = adapter.onFolderClick,
+
+                            onCollapseClick = adapter.onCollapseClick,
+
+                            onAppClick = adapter.onAppClick,
+
+                            onAllAppsClick = adapter.onAllAppsClick
+                        )
+                }
+            },
+
+            onAppClick = { app ->
+
+                RecentAppsManager.registerAppOpen(
+                    requireContext(),
+                    app
+                )
+
+                AppLauncher.openApp(
+                    requireContext(),
+                    app.packageName,
+                    app.name
+                )
+            },
+
+            onAllAppsClick = {
+                openFragment(AllAppsFragment())
+            }
+        )
+
         categoryRecycler.apply {
+
             layoutManager = gridLayoutManager
 
-            adapter = CategoryFolderAdapter(
-                categories = categories,
-                onCategoryClick = { item ->
-                    val position = categories.indexOf(item)
-
-                    if (position == -1) return@CategoryFolderAdapter
-
-                    categories.forEachIndexed { index, categoryItem ->
-                        if (index != position) {
-                            categoryItem.isExpanded = false
-                        }
-                    }
-
-                    item.isExpanded = !item.isExpanded
-
-                    adapter?.notifyDataSetChanged()
-                },
-                onAppClick = { app ->
-                    RecentAppsManager.registerAppOpen(requireContext(), app)
-                    AppLauncher.openApp(requireContext(), app.packageName, app.name)
-                },
-                onAllAppsClick = {
-                    openFragment(AllAppsFragment())
-                }
-            )
+            this.adapter = adapter
 
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+
             isNestedScrollingEnabled = false
 
             layoutParams = LinearLayout.LayoutParams(
