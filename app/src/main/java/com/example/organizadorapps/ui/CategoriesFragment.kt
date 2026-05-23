@@ -3,81 +3,89 @@ package com.example.organizadorapps.ui
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Gravity
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.organizadorapps.AppCategory
-import com.example.organizadorapps.AppLauncher
+import com.example.organizadorapps.CategoryAdapter
 import com.example.organizadorapps.CategoryRules
 import com.example.organizadorapps.InstalledApp
 
 class CategoriesFragment : Fragment() {
 
-    private lateinit var layout: LinearLayout
+    private lateinit var recyclerView: RecyclerView
     private lateinit var allApps: List<InstalledApp>
+    private lateinit var rootLayout: LinearLayout
 
     override fun onCreateView(
-        inflater: android.view.LayoutInflater,
+        inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+
         allApps = getInstalledLaunchableApps()
 
-        val rootScroll = ScrollView(requireContext()).apply {
-            setBackgroundColor(Color.parseColor("#0F1115"))
-        }
-
-        layout = LinearLayout(requireContext()).apply {
+        rootLayout = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(32, 48, 32, 48)
+            setBackgroundColor(Color.parseColor("#0F1115"))
+            setPadding(24, 42, 24, 24)
         }
 
-        renderContent(allApps)
-
-        rootScroll.addView(layout)
-        return rootScroll
-    }
-
-    private fun renderContent(apps: List<InstalledApp>) {
-        layout.removeAllViews()
-
-        layout.addView(TextView(requireContext()).apply {
+        rootLayout.addView(TextView(requireContext()).apply {
             text = "Categorías"
-            textSize = 28f
+            textSize = 30f
             setTextColor(Color.WHITE)
         })
 
-        layout.addView(TextView(requireContext()).apply {
-            text = "${apps.size} apps detectadas"
+        rootLayout.addView(TextView(requireContext()).apply {
+            text = "${allApps.size} apps detectadas"
             textSize = 14f
-            setTextColor(Color.parseColor("#9AA0A6"))
+            setTextColor(Color.parseColor("#8F96A3"))
             setPadding(0, 8, 0, 24)
         })
 
-        layout.addView(searchBox())
+        rootLayout.addView(searchBox())
 
-        val categories = buildCategories(apps)
-
-        categories.forEach { category ->
-            if (category.apps.isNotEmpty()) {
-                addCategorySection(category)
-            }
+        recyclerView = RecyclerView(requireContext()).apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            overScrollMode = RecyclerView.OVER_SCROLL_NEVER
         }
+
+        rootLayout.addView(recyclerView)
+
+        renderCategories(allApps)
+
+        return rootLayout
     }
 
     private fun searchBox(): EditText {
+
         return EditText(requireContext()).apply {
+
             hint = "Buscar apps..."
             textSize = 15f
+
             setHintTextColor(Color.parseColor("#777E8C"))
             setTextColor(Color.WHITE)
+
             setSingleLine(true)
+
             setPadding(28, 0, 28, 0)
-            background = roundedBox("#1A1F2B", "#2B3140", 24f)
+
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#1A1F2B"))
+                cornerRadius = 24f
+                setStroke(1, Color.parseColor("#2B3140"))
+            }
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -86,10 +94,22 @@ class CategoriesFragment : Fragment() {
                 setMargins(0, 0, 0, 24)
             }
 
-            addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            addTextChangedListener(object : TextWatcher {
 
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {}
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+
                     val query = s.toString().trim().lowercase()
 
                     val filteredApps = if (query.isEmpty()) {
@@ -101,93 +121,50 @@ class CategoriesFragment : Fragment() {
                         }
                     }
 
-                    renderContent(filteredApps)
+                    renderCategories(filteredApps)
                 }
 
-                override fun afterTextChanged(s: android.text.Editable?) {}
+                override fun afterTextChanged(s: Editable?) {}
             })
         }
     }
 
+    private fun renderCategories(apps: List<InstalledApp>) {
+
+        val categories = buildCategories(apps)
+
+        recyclerView.adapter = CategoryAdapter(
+            categories.filter { it.apps.isNotEmpty() }
+        )
+    }
+
     private fun buildCategories(apps: List<InstalledApp>): List<AppCategory> {
-        val ruleCategories = CategoryRules.rules.map { rule ->
+
+        val dynamicCategories = CategoryRules.rules.map { rule ->
+
             AppCategory(
                 rule.key,
+
                 apps.filter { app ->
-                    val searchable = "${app.name} ${app.packageName}".lowercase()
-                    rule.value.any { keyword -> searchable.contains(keyword) }
+
+                    val searchable =
+                        "${app.name} ${app.packageName}".lowercase()
+
+                    rule.value.any { keyword ->
+                        searchable.contains(keyword)
+                    }
                 }
             )
         }
 
-        return ruleCategories + AppCategory("Todas las apps", apps)
-    }
-
-    private fun addCategorySection(category: AppCategory) {
-        layout.addView(TextView(requireContext()).apply {
-            text = category.name
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            setPadding(0, 24, 0, 18)
-        })
-
-        val grid = GridLayout(requireContext()).apply {
-            columnCount = 4
-        }
-
-        category.apps.forEach { app ->
-            grid.addView(appCard(app))
-        }
-
-        layout.addView(grid)
-    }
-
-    private fun appCard(app: InstalledApp): View {
-        val card = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(16, 16, 16, 16)
-            background = roundedBox("#1A1F2B", "#2B3140", 28f)
-            isClickable = true
-            isFocusable = true
-
-            setOnClickListener {
-                AppLauncher.openApp(requireContext(), app.packageName, app.name)
-            }
-        }
-
-        card.layoutParams = GridLayout.LayoutParams().apply {
-            width = 220
-            height = 260
-            setMargins(12, 12, 12, 12)
-        }
-
-        card.addView(ImageView(requireContext()).apply {
-            setImageDrawable(app.icon)
-            layoutParams = LinearLayout.LayoutParams(96, 96)
-        })
-
-        card.addView(TextView(requireContext()).apply {
-            text = app.name
-            textSize = 12f
-            setTextColor(Color.parseColor("#E5E7EB"))
-            gravity = Gravity.CENTER
-            setPadding(0, 16, 0, 0)
-            maxLines = 2
-        })
-
-        return card
-    }
-
-    private fun roundedBox(bgColor: String, strokeColor: String, radius: Float): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(Color.parseColor(bgColor))
-            cornerRadius = radius
-            setStroke(1, Color.parseColor(strokeColor))
-        }
+        return dynamicCategories + AppCategory(
+            "Todas las apps",
+            apps
+        )
     }
 
     private fun getInstalledLaunchableApps(): List<InstalledApp> {
+
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
@@ -196,6 +173,7 @@ class CategoriesFragment : Fragment() {
             .packageManager
             .queryIntentActivities(intent, PackageManager.MATCH_ALL)
             .map {
+
                 InstalledApp(
                     name = it.loadLabel(requireContext().packageManager).toString(),
                     packageName = it.activityInfo.packageName,
