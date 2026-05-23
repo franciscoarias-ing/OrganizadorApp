@@ -105,10 +105,12 @@ class HomeFragment : Fragment() {
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(requireContext(), 112)
+                LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 setMargins(0, 0, 0, AppUiUtils.dp(requireContext(), 20))
             }
+
+            minimumHeight = AppUiUtils.dp(requireContext(), 132)
             minimumHeight = AppUiUtils.dp(requireContext(), 118)
             addView(
                 AppUiUtils.quickAction(requireContext(), "⌘", "Todas las apps") {

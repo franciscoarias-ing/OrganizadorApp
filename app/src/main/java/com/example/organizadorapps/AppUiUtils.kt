@@ -247,7 +247,7 @@ object AppUiUtils {
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                1fGIT
+                1f
             )
 
             setOnClickListener {
