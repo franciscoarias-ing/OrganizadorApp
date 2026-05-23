@@ -282,6 +282,8 @@ object AppUiUtils {
         context: Context,
         title: String,
         actionText: String,
+        topMarginDp: Int = 18,
+        bottomMarginDp: Int = 12,
         onActionClick: () -> Unit
     ): LinearLayout {
         return LinearLayout(context).apply {
@@ -292,7 +294,7 @@ object AppUiUtils {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, dp(context, 18), 0, dp(context, 12))
+                setMargins(0, dp(context, topMarginDp), 0, dp(context, bottomMarginDp))
             }
 
             addView(TextView(context).apply {

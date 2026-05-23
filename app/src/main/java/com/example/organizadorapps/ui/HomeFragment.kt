@@ -66,10 +66,7 @@ class HomeFragment : Fragment() {
             )
         }
 
-        root.addView(AppUiUtils.smallGreeting(requireContext(), "¡Buenos días! 👋"))
-        root.addView(AppUiUtils.title(requireContext(), "Inicio inteligente"))
-        root.addView(AppUiUtils.subtitle(requireContext(), "Accede rápido a lo que más usas."))
-
+        root.addView(AppUiUtils.title(requireContext(), "Apps"))
         root.addView(
             AppUiUtils.searchButton(
                 context = requireContext(),
