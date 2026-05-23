@@ -6,7 +6,11 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 
 class FavoritesFragment : Fragment() {
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         return TextView(requireContext()).apply {
             text = "Favoritos\nPróximamente apps favoritas"
             textSize = 22f

@@ -6,7 +6,11 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 
 class HomeFragment : Fragment() {
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         return TextView(requireContext()).apply {
             text = "Inicio\nPróximamente hub inteligente"
             textSize = 22f
