@@ -1,28 +1,34 @@
 package com.example.organizadorapps
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.Menu
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
-import com.example.organizadorapps.ui.CategoriesFragment
+
 import com.example.organizadorapps.ui.FavoritesFragment
 import com.example.organizadorapps.ui.HomeFragment
 import com.example.organizadorapps.ui.UsageFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.navigation.NavigationBarView
 
 class MainActivity : AppCompatActivity() {
 
     private val containerId = 1001
     private val navHome = 1
-    private val navCategories = 2
+
     private val navFavorites = 3
     private val navUsage = 4
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         supportActionBar?.hide()
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(UiConstants.BACKGROUND)
@@ -30,6 +36,8 @@ class MainActivity : AppCompatActivity() {
 
         val fragmentContainer = FrameLayout(this).apply {
             id = containerId
+            setBackgroundColor(UiConstants.BACKGROUND)
+
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -40,14 +48,12 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = BottomNavigationView(this).apply {
             setBackgroundColor(UiConstants.SURFACE)
             itemIconTintList = null
-            itemTextColor = android.content.res.ColorStateList.valueOf(UiConstants.TEXT_SECONDARY)
-            labelVisibilityMode = com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED
+            itemTextColor = ColorStateList.valueOf(UiConstants.TEXT_SECONDARY)
+            labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
             menu.add(Menu.NONE, navHome, Menu.NONE, "Inicio")
                 .setIcon(android.R.drawable.ic_menu_view)
 
-            menu.add(Menu.NONE, navCategories, Menu.NONE, "Categorías")
-                .setIcon(android.R.drawable.ic_dialog_dialer)
 
             menu.add(Menu.NONE, navFavorites, Menu.NONE, "Favoritos")
                 .setIcon(android.R.drawable.btn_star_big_off)
@@ -58,7 +64,6 @@ class MainActivity : AppCompatActivity() {
             setOnItemSelectedListener { item ->
                 when (item.itemId) {
                     navHome -> openFragment(HomeFragment())
-                    navCategories -> openFragment(CategoriesFragment())
                     navFavorites -> openFragment(FavoritesFragment())
                     navUsage -> openFragment(UsageFragment())
                 }
@@ -70,6 +75,28 @@ class MainActivity : AppCompatActivity() {
         root.addView(bottomNav)
 
         setContentView(root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            fragmentContainer.setPadding(
+                0,
+                systemBars.top,
+                0,
+                0
+            )
+
+            bottomNav.setPadding(
+                0,
+                0,
+                0,
+                systemBars.bottom
+            )
+
+            insets
+        }
+
+        ViewCompat.requestApplyInsets(root)
 
         if (savedInstanceState == null) {
             bottomNav.selectedItemId = navHome

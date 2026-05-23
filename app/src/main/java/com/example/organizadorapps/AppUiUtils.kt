@@ -12,7 +12,11 @@ import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-
+import android.content.res.ColorStateList
+import android.text.TextUtils
+import android.util.TypedValue
+import android.widget.ImageView
+import androidx.core.widget.TextViewCompat
 object AppUiUtils {
 
     fun dp(context: Context, value: Int): Int {
@@ -160,7 +164,7 @@ object AppUiUtils {
 
     fun quickAction(
         context: Context,
-        icon: String,
+        iconRes: Int,
         label: String,
         onClick: () -> Unit
     ): LinearLayout {
@@ -180,28 +184,48 @@ object AppUiUtils {
                 AnimationUtils.press(this) { onClick() }
             }
 
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 25f
-                setTextColor(UiConstants.ACCENT)
-                gravity = Gravity.CENTER
-                includeFontPadding = false
+            addView(ImageView(context).apply {
+                setImageResource(iconRes)
+                imageTintList = ColorStateList.valueOf(UiConstants.ACCENT)
                 background = circleAccentSoft(context)
+                scaleType = ImageView.ScaleType.CENTER
+                adjustViewBounds = false
+
+                setPadding(
+                    quickActionIconInnerPadding(context),
+                    quickActionIconInnerPadding(context),
+                    quickActionIconInnerPadding(context),
+                    quickActionIconInnerPadding(context)
+                )
 
                 layoutParams = LinearLayout.LayoutParams(
-                    dp(context, 54),
-                    dp(context, 54)
+                    quickActionIconSize(context),
+                    quickActionIconSize(context)
                 )
             })
 
             addView(TextView(context).apply {
                 text = label
-                textSize = 12f
-                setTextColor(UiConstants.TEXT_PRIMARY)
                 gravity = Gravity.CENTER
+                setTextColor(UiConstants.TEXT_PRIMARY)
                 includeFontPadding = false
-                maxLines = 2
-                setPadding(0, dp(context, 10), 0, 0)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+
+                TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                    this,
+                    9,
+                    12,
+                    1,
+                    TypedValue.COMPLEX_UNIT_SP
+                )
+
+                setPadding(0, quickActionTextTopPadding(context), 0, 0)
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
             })
         }
     }
@@ -328,13 +352,57 @@ object AppUiUtils {
     fun verticalDivider(context: Context): View {
         return View(context).apply {
             setBackgroundColor(UiConstants.BORDER)
+
             layoutParams = LinearLayout.LayoutParams(
                 dp(context, 1),
-                dp(context, 58)
+                quickActionDividerHeight(context)
             ).apply {
-                setMargins(dp(context, 8), 0, dp(context, 8), 0)
+                setMargins(
+                    quickActionDividerMargin(context),
+                    0,
+                    quickActionDividerMargin(context),
+                    0
+                )
             }
         }
+    }
+    fun quickActionsHorizontalPadding(context: Context): Int {
+        return (context.resources.displayMetrics.widthPixels * 0.025f).toInt()
+            .coerceIn(dp(context, 8), dp(context, 14))
+    }
+
+    fun quickActionsVerticalPadding(context: Context): Int {
+        return (quickActionIconSize(context) * 0.24f).toInt()
+            .coerceIn(dp(context, 12), dp(context, 16))
+    }
+
+    fun quickActionsMinHeight(context: Context): Int {
+        return quickActionIconSize(context) +
+                quickActionTextTopPadding(context) +
+                dp(context, 20)
+    }
+
+    private fun quickActionIconSize(context: Context): Int {
+        return (context.resources.displayMetrics.widthPixels * 0.135f).toInt()
+            .coerceIn(dp(context, 50), dp(context, 58))
+    }
+
+    private fun quickActionIconInnerPadding(context: Context): Int {
+        return (quickActionIconSize(context) * 0.24f).toInt()
+    }
+
+    private fun quickActionTextTopPadding(context: Context): Int {
+        return (quickActionIconSize(context) * 0.13f).toInt()
+            .coerceIn(dp(context, 6), dp(context, 9))
+    }
+
+    private fun quickActionDividerHeight(context: Context): Int {
+        return (quickActionIconSize(context) * 1.12f).toInt()
+    }
+
+    private fun quickActionDividerMargin(context: Context): Int {
+        return (context.resources.displayMetrics.widthPixels * 0.004f).toInt()
+            .coerceIn(dp(context, 1), dp(context, 3))
     }
 
     fun glassCard(): GradientDrawable {
