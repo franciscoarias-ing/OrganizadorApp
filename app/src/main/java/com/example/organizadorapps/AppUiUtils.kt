@@ -1,7 +1,6 @@
 package com.example.organizadorapps
 import android.text.Editable
 import android.text.TextWatcher
-import android.R.attr.singleLine
 import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
