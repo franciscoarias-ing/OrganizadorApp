@@ -4,84 +4,75 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.organizadorapps.AppCategory
+import com.example.organizadorapps.AppAdapter
 import com.example.organizadorapps.AppRepository
-import com.example.organizadorapps.CategoryAdapter
-import com.example.organizadorapps.CategoryRules
 import com.example.organizadorapps.InstalledApp
 
-class CategoriesFragment : Fragment() {
+class AllAppsFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var allApps: List<InstalledApp>
-    private lateinit var rootLayout: LinearLayout
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
         allApps = AppRepository.getInstalledLaunchableApps(requireContext())
 
-        rootLayout = LinearLayout(requireContext()).apply {
+        val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.parseColor("#0F1115"))
             setPadding(24, 42, 24, 24)
         }
 
-        rootLayout.addView(TextView(requireContext()).apply {
-            text = "Categorías"
+        root.addView(TextView(requireContext()).apply {
+            text = "Todas las apps"
             textSize = 30f
             setTextColor(Color.WHITE)
         })
 
-        rootLayout.addView(TextView(requireContext()).apply {
+        root.addView(TextView(requireContext()).apply {
             text = "${allApps.size} apps detectadas"
             textSize = 14f
             setTextColor(Color.parseColor("#8F96A3"))
             setPadding(0, 8, 0, 24)
         })
 
-        rootLayout.addView(searchBox())
+        root.addView(searchBox())
+
         recyclerView = RecyclerView(requireContext()).apply {
-            layoutManager = LinearLayoutManager(requireContext())
+            layoutManager = GridLayoutManager(requireContext(), 4)
+            adapter = AppAdapter(allApps)
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-            layoutParams = LinearLayout.LayoutParams(
+        }
+
+        root.addView(
+            recyclerView,
+            LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
-        }
+        )
 
-        rootLayout.addView(recyclerView)
-
-        renderCategories(allApps)
-
-        return rootLayout
+        return root
     }
 
     private fun searchBox(): EditText {
-
         return EditText(requireContext()).apply {
-
             hint = "Buscar apps..."
             textSize = 15f
-
             setHintTextColor(Color.parseColor("#777E8C"))
             setTextColor(Color.WHITE)
-
             setSingleLine(true)
-
             setPadding(28, 0, 28, 0)
 
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -98,7 +89,6 @@ class CategoriesFragment : Fragment() {
             }
 
             addTextChangedListener(object : TextWatcher {
-
                 override fun beforeTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -112,7 +102,6 @@ class CategoriesFragment : Fragment() {
                     before: Int,
                     count: Int
                 ) {
-
                     val query = s.toString().trim().lowercase()
 
                     val filteredApps = if (query.isEmpty()) {
@@ -124,44 +113,11 @@ class CategoriesFragment : Fragment() {
                         }
                     }
 
-                    renderCategories(filteredApps)
+                    recyclerView.adapter = AppAdapter(filteredApps)
                 }
 
                 override fun afterTextChanged(s: Editable?) {}
             })
         }
     }
-
-    private fun renderCategories(apps: List<InstalledApp>) {
-
-        val categories = buildCategories(apps)
-
-        recyclerView.adapter = CategoryAdapter(
-            categories.filter { it.apps.isNotEmpty() }
-        )
-    }
-
-    private fun buildCategories(apps: List<InstalledApp>): List<AppCategory> {
-
-        val dynamicCategories = CategoryRules.rules.map { rule ->
-
-            AppCategory(
-                rule.key,
-
-                apps.filter { app ->
-
-                    val searchable =
-                        "${app.name} ${app.packageName}".lowercase()
-
-                    rule.value.any { keyword ->
-                        searchable.contains(keyword)
-                    }
-                }
-            )
-        }
-
-        return dynamicCategories
-    }
-
-
 }
