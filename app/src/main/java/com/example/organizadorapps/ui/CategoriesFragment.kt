@@ -100,7 +100,11 @@ class CategoriesFragment : Fragment() {
                 if (launchIntent != null) {
                     startActivity(launchIntent)
                 } else {
-                    Toast.makeText(requireContext(), "No se pudo abrir ${app.name}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "No se pudo abrir ${app.name}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
