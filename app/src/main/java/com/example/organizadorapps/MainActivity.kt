@@ -2,13 +2,10 @@ package com.example.organizadorapps
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.ComponentActivity
 
 class MainActivity : ComponentActivity() {
@@ -18,66 +15,146 @@ class MainActivity : ComponentActivity() {
 
         val apps = getInstalledLaunchableApps()
 
-        val scrollView = ScrollView(this)
+        val rootScroll = ScrollView(this).apply {
+            setBackgroundColor(Color.parseColor("#0F1115"))
+        }
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(32, 60, 32, 32)
+            setPadding(32, 48, 32, 48)
         }
 
         val title = TextView(this).apply {
-            text = "Organizador Apps"
+            text = "OrganizadorApp"
             textSize = 28f
-            setPadding(0, 0, 0, 40)
+            setTextColor(Color.WHITE)
+        }
+
+        val subtitle = TextView(this).apply {
+            text = "${apps.size} apps detectadas"
+            textSize = 14f
+            setTextColor(Color.parseColor("#9AA0A6"))
+            setPadding(0, 8, 0, 32)
         }
 
         container.addView(title)
+        container.addView(subtitle)
 
-        apps.forEach { app ->
-
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, 16, 0, 16)
-            }
-
-            val iconView = ImageView(this).apply {
-                setImageDrawable(app.icon)
-
-                layoutParams = LinearLayout.LayoutParams(96, 96)
-            }
-
-            val nameView = TextView(this).apply {
-                text = app.name
-                textSize = 18f
-                setPadding(24, 0, 0, 0)
-            }
-
-            row.addView(iconView)
-            row.addView(nameView)
-
-            row.setOnClickListener {
-
-                val launchIntent =
-                    packageManager.getLaunchIntentForPackage(app.packageName)
-
-                if (launchIntent != null) {
-                    startActivity(launchIntent)
-                } else {
-                    Toast.makeText(
-                        this,
-                        "No se pudo abrir ${app.name}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+        val categories = listOf(
+            AppCategory(
+                "Social",
+                apps.filter {
+                    it.name.contains("WhatsApp", true) ||
+                            it.name.contains("Instagram", true) ||
+                            it.name.contains("Telegram", true) ||
+                            it.name.contains("Facebook", true) ||
+                            it.name.contains("TikTok", true)
                 }
-            }
+            ),
 
-            container.addView(row)
+            AppCategory(
+                "Google",
+                apps.filter {
+                    it.name.contains("Google", true) ||
+                            it.name.contains("Chrome", true) ||
+                            it.name.contains("Gmail", true) ||
+                            it.name.contains("Maps", true) ||
+                            it.name.contains("Drive", true) ||
+                            it.name.contains("YouTube", true)
+                }
+            ),
+
+            AppCategory(
+                "Multimedia",
+                apps.filter {
+                    it.name.contains("Spotify", true) ||
+                            it.name.contains("Netflix", true) ||
+                            it.name.contains("Prime", true) ||
+                            it.name.contains("Music", true)
+                }
+            ),
+
+            AppCategory(
+                "Herramientas",
+                apps.filter {
+                    it.name.contains("Camera", true) ||
+                            it.name.contains("Clock", true) ||
+                            it.name.contains("Settings", true) ||
+                            it.name.contains("Files", true)
+                }
+            )
+        )
+
+        categories.forEach { category ->
+
+            if (category.apps.isNotEmpty()) {
+
+                val categoryTitle = TextView(this).apply {
+                    text = category.name
+                    textSize = 20f
+                    setTextColor(Color.WHITE)
+                    setPadding(0, 24, 0, 18)
+                }
+
+                container.addView(categoryTitle)
+
+                val grid = GridLayout(this).apply {
+                    columnCount = 4
+                }
+
+                category.apps.forEach { app ->
+
+                    val card = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                        setPadding(16, 16, 16, 16)
+                        background = getDrawable(android.R.drawable.dialog_holo_light_frame)
+
+                        setOnClickListener {
+
+                            val launchIntent =
+                                packageManager.getLaunchIntentForPackage(app.packageName)
+
+                            if (launchIntent != null) {
+                                startActivity(launchIntent)
+                            }
+                        }
+                    }
+
+                    val params = GridLayout.LayoutParams().apply {
+                        width = 220
+                        height = 260
+                        setMargins(12, 12, 12, 12)
+                    }
+
+                    card.layoutParams = params
+
+                    val icon = ImageView(this).apply {
+                        setImageDrawable(app.icon)
+                        layoutParams = LinearLayout.LayoutParams(96, 96)
+                    }
+
+                    val name = TextView(this).apply {
+                        text = app.name
+                        textSize = 12f
+                        setTextColor(Color.WHITE)
+                        gravity = Gravity.CENTER
+                        setPadding(0, 16, 0, 0)
+                    }
+
+                    card.addView(icon)
+                    card.addView(name)
+
+                    grid.addView(card)
+                }
+
+                container.addView(grid)
+            }
         }
 
-        scrollView.addView(container)
+        rootScroll.addView(container)
 
-        setContentView(scrollView)
+        setContentView(rootScroll)
     }
 
     private fun getInstalledLaunchableApps(): List<InstalledApp> {
@@ -97,6 +174,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
             .distinctBy { it.packageName }
-            .sortedBy { it.name.lowercase() }
+            .sortedBy { it.name }
     }
 }
