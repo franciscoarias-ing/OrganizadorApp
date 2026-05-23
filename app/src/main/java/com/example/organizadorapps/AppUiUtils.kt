@@ -15,7 +15,71 @@ object AppUiUtils {
     fun dp(context: Context, value: Int): Int {
         return (value * context.resources.displayMetrics.density).toInt()
     }
+    fun actionCard(
+        context: Context,
+        title: String,
+        subtitle: String,
+        icon: String,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = roundedCard()
+            isClickable = true
+            isFocusable = true
 
+            setPadding(
+                dp(context, 18),
+                dp(context, 16),
+                dp(context, 18),
+                dp(context, 16)
+            )
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, dp(context, 10), 0, dp(context, 10))
+            }
+
+            setOnClickListener {
+                AnimationUtils.press(this) { onClick() }
+            }
+
+            addView(TextView(context).apply {
+                text = icon
+                textSize = 28f
+                setTextColor(UiConstants.ACCENT)
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(context, 52),
+                    dp(context, 52)
+                )
+            })
+
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(context, 14), 0, 0, 0)
+
+                addView(TextView(context).apply {
+                    text = title
+                    textSize = 16f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setTextColor(UiConstants.TEXT_PRIMARY)
+                    includeFontPadding = false
+                })
+
+                addView(TextView(context).apply {
+                    text = subtitle
+                    textSize = 13f
+                    setTextColor(UiConstants.TEXT_SECONDARY)
+                    includeFontPadding = false
+                    setPadding(0, dp(context, 6), 0, 0)
+                })
+            })
+        }
+    }
     fun title(context: Context, textValue: String): TextView {
         return TextView(context).apply {
             text = textValue

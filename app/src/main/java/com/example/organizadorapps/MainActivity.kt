@@ -1,29 +1,25 @@
 package com.example.organizadorapps
 
-import android.annotation.SuppressLint
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
+import android.view.Menu
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import com.example.organizadorapps.ui.CategoriesFragment
 import com.example.organizadorapps.ui.FavoritesFragment
 import com.example.organizadorapps.ui.HomeFragment
 import com.example.organizadorapps.ui.UsageFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
 
-    private val fragmentContainerId = 1001
+    private val containerId = 1001
+    private val navHome = 1
+    private val navCategories = 2
+    private val navFavorites = 3
+    private val navUsage = 4
 
-    private val menuHome = 1
-    private val menuCategories = 2
-    private val menuFavorites = 3
-    private val menuUsage = 4
-
-    @SuppressLint("ResourceType")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -33,7 +29,7 @@ class MainActivity : FragmentActivity() {
         }
 
         val fragmentContainer = FrameLayout(this).apply {
-            id = fragmentContainerId
+            id = containerId
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -41,64 +37,50 @@ class MainActivity : FragmentActivity() {
             )
         }
 
-        val navColors = ColorStateList(
-            arrayOf(
-                intArrayOf(android.R.attr.state_checked),
-                intArrayOf()
-            ),
-            intArrayOf(
-                UiConstants.ACCENT,
-                UiConstants.TEXT_MUTED
-            )
-        )
+        val bottomNav = BottomNavigationView(this).apply {
+            setBackgroundColor(UiConstants.SURFACE)
+            itemIconTintList = null
+            itemTextColor = android.content.res.ColorStateList.valueOf(UiConstants.TEXT_SECONDARY)
+            labelVisibilityMode = com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        val bottomNavigation = BottomNavigationView(this).apply {
-            setBackgroundColor(Color.parseColor("#111827"))
-            itemIconTintList = navColors
-            itemTextColor = navColors
-            itemRippleColor = ColorStateList.valueOf(UiConstants.ACCENT_SOFT)
-            labelVisibilityMode =
-                com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_LABELED
-
-            menu.add(0, menuHome, 0, "Inicio")
+            menu.add(Menu.NONE, navHome, Menu.NONE, "Inicio")
                 .setIcon(android.R.drawable.ic_menu_view)
 
-            menu.add(0, menuCategories, 1, "Categorías")
+            menu.add(Menu.NONE, navCategories, Menu.NONE, "Categorías")
+                .setIcon(android.R.drawable.ic_dialog_dialer)
+
+            menu.add(Menu.NONE, navFavorites, Menu.NONE, "Favoritos")
+                .setIcon(android.R.drawable.btn_star_big_off)
+
+            menu.add(Menu.NONE, navUsage, Menu.NONE, "Uso")
                 .setIcon(android.R.drawable.ic_menu_sort_by_size)
-
-            menu.add(0, menuFavorites, 2, "Favoritos")
-                .setIcon(android.R.drawable.star_big_on)
-
-            menu.add(0, menuUsage, 3, "Uso")
-                .setIcon(android.R.drawable.ic_menu_recent_history)
 
             setOnItemSelectedListener { item ->
                 when (item.itemId) {
-                    menuHome -> showFragment(HomeFragment())
-                    menuCategories -> showFragment(CategoriesFragment())
-                    menuFavorites -> showFragment(FavoritesFragment())
-                    menuUsage -> showFragment(UsageFragment())
+                    navHome -> openFragment(HomeFragment())
+                    navCategories -> openFragment(CategoriesFragment())
+                    navFavorites -> openFragment(FavoritesFragment())
+                    navUsage -> openFragment(UsageFragment())
                 }
                 true
             }
         }
 
         root.addView(fragmentContainer)
-        root.addView(bottomNavigation)
+        root.addView(bottomNav)
 
         setContentView(root)
 
-        bottomNavigation.selectedItemId = menuHome
+        if (savedInstanceState == null) {
+            bottomNav.selectedItemId = navHome
+            openFragment(HomeFragment())
+        }
     }
 
-    private fun showFragment(fragment: Fragment) {
-        supportFragmentManager
-            .beginTransaction()
-            .setCustomAnimations(
-                android.R.anim.fade_in,
-                android.R.anim.fade_out
-            )
-            .replace(fragmentContainerId, fragment)
+    private fun openFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+            .replace(containerId, fragment)
             .commit()
     }
 }

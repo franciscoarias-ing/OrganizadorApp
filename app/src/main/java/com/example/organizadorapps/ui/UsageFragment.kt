@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,88 +23,76 @@ class UsageFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        val allApps = AppRepository.getInstalledLaunchableApps(requireContext())
+        val recentPackages = RecentAppsManager.getRecentPackageNames(requireContext())
 
-        val allApps =
-            AppRepository.getInstalledLaunchableApps(requireContext())
+        val stats = recentPackages.mapNotNull { packageName ->
 
-        val recentPackages =
-            RecentAppsManager.getRecentPackageNames(requireContext())
+            val app = allApps.find { it.packageName == packageName }
 
-        val stats = recentPackages
-            .groupingBy { it }
-            .eachCount()
-            .mapNotNull { entry ->
-
-                val app =
-                    allApps.find { it.packageName == entry.key }
-
-                app?.let {
-                    UsageAppStat(
-                        app = it,
-                        openCount = entry.value,
-                        lastOpenedAt = 0L
-                    )
-                }
+            app?.let {
+                UsageAppStat(
+                    app = it,
+                    openCount = recentPackages.count { p -> p == packageName },
+                    lastOpenedAt = System.currentTimeMillis()
+                )
             }
-            .sortedByDescending { it.openCount }
+
+        }.distinctBy { it.app.packageName }
+
+        val scroll = ScrollView(requireContext()).apply {
+            setBackgroundColor(UiConstants.BACKGROUND)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isFillViewport = true
+        }
 
         val root = LinearLayout(requireContext()).apply {
-
             orientation = LinearLayout.VERTICAL
-
-            setBackgroundColor(UiConstants.BACKGROUND)
-
             setPadding(
-                UiConstants.SCREEN_PADDING,
-                UiConstants.TOP_PADDING,
-                UiConstants.SCREEN_PADDING,
-                24
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 42),
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 24)
             )
         }
 
-        root.addView(AppUiUtils.kicker(requireContext(), "Actividad"))
+        root.addView(AppUiUtils.kicker(requireContext(), "Actividad local"))
         root.addView(AppUiUtils.title(requireContext(), "Uso"))
+        root.addView(AppUiUtils.subtitle(requireContext(), "Apps abiertas desde OrganizadorApp"))
 
         root.addView(
-            AppUiUtils.subtitle(
-                requireContext(),
-                "Estadísticas locales generadas desde OrganizadorApp."
-            )
+            AppUiUtils.actionCard(
+                context = requireContext(),
+                title = "Apps detectadas",
+                subtitle = "${allApps.size} aplicaciones lanzables",
+                icon = "⌘"
+            ) {}
         )
 
-        if (stats.isEmpty()) {
+        root.addView(
+            AppUiUtils.actionCard(
+                context = requireContext(),
+                title = "Recientes registrados",
+                subtitle = "${recentPackages.size} aperturas locales",
+                icon = "↻"
+            ) {}
+        )
 
-            root.addView(
-                AppUiUtils.actionCard(
-                    context = requireContext(),
-                    title = "Sin estadísticas todavía",
-                    subtitle = "Abre apps desde OrganizadorApp para generar actividad.",
-                    icon = "↗"
-                ) {}
-            )
+        val recyclerView = RecyclerView(requireContext()).apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = UsageStatsAdapter(stats)
+            overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+            isNestedScrollingEnabled = false
 
-        } else {
-
-            root.addView(
-                RecyclerView(requireContext()).apply {
-
-                    layoutManager =
-                        LinearLayoutManager(requireContext())
-
-                    adapter = UsageStatsAdapter(stats)
-
-                    overScrollMode =
-                        RecyclerView.OVER_SCROLL_NEVER
-
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        0,
-                        1f
-                    )
-                }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        return root
+        root.addView(recyclerView)
+        scroll.addView(root)
+
+        return scroll
     }
 }

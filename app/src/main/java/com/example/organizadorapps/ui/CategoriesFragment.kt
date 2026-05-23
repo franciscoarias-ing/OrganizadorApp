@@ -19,20 +19,15 @@ import com.example.organizadorapps.UiConstants
 
 class CategoriesFragment : Fragment() {
 
-    private lateinit var recyclerView: RecyclerView
-
-    private lateinit var adapter: CategoryFolderAdapter
-
     private var categories: List<AppCategory> = emptyList()
+    private lateinit var recyclerView: RecyclerView
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
-        val apps = AppRepository
-            .getInstalledLaunchableApps(requireContext())
+        val apps = AppRepository.getInstalledLaunchableApps(requireContext())
 
         categories = CategorySuggestionEngine
             .categorizeApps(apps)
@@ -46,7 +41,6 @@ class CategoriesFragment : Fragment() {
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-
             setPadding(
                 AppUiUtils.dp(requireContext(), 22),
                 AppUiUtils.dp(requireContext(), 42),
@@ -55,60 +49,17 @@ class CategoriesFragment : Fragment() {
             )
         }
 
-        root.addView(
-            AppUiUtils.smallGreeting(
-                requireContext(),
-                "Organización inteligente"
-            )
-        )
-
-        root.addView(
-            AppUiUtils.title(
-                requireContext(),
-                "Categorías"
-            )
-        )
-
-        root.addView(
-            AppUiUtils.subtitle(
-                requireContext(),
-                "Tus apps agrupadas automáticamente"
-            )
-        )
-
+        root.addView(AppUiUtils.kicker(requireContext(), "Organización inteligente"))
+        root.addView(AppUiUtils.title(requireContext(), "Categorías"))
+        root.addView(AppUiUtils.subtitle(requireContext(), "Tus apps agrupadas automáticamente"))
         root.addView(searchBox())
 
         recyclerView = RecyclerView(requireContext()).apply {
-
-            // Cambio importante:
-            // ahora 2 columnas premium.
             layoutManager = GridLayoutManager(requireContext(), 2)
-
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-
             isNestedScrollingEnabled = false
 
-            adapter = CategoryFolderAdapter(
-                categories
-            ) { category ->
-
-                parentFragmentManager.beginTransaction()
-                    .setCustomAnimations(
-                        android.R.anim.fade_in,
-                        android.R.anim.fade_out
-                    )
-                    .replace(
-                        (view?.parent as ViewGroup).id,
-                        CategoryDetailFragment(
-                            category.name,
-                            category.apps
-                        )
-                    )
-                    .addToBackStack(null)
-                    .commit()
-            }.also {
-                this@CategoriesFragment.adapter = it
-            }
+            adapter = buildAdapter(categories)
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -117,62 +68,41 @@ class CategoriesFragment : Fragment() {
         }
 
         root.addView(recyclerView)
-
         scroll.addView(root)
 
         return scroll
     }
 
     private fun searchBox(): EditText {
-
         return AppUiUtils.searchBox(
             context = requireContext(),
-            hintValue = "Buscar apps...",
-            onTextChanged = { query ->
-                filterCategories(query)
-            }
+            hintValue = "Buscar categorías o apps...",
+            onTextChanged = { query -> filterCategories(query) }
         )
     }
 
     private fun filterCategories(query: String) {
-
         val filtered = if (query.isBlank()) {
-
             categories
-
         } else {
-
             categories.filter { category ->
-
-                category.name.contains(
-                    query,
-                    ignoreCase = true
-                ) ||
-
+                category.name.contains(query, ignoreCase = true) ||
                         category.apps.any { app ->
-                            app.name.contains(
-                                query,
-                                ignoreCase = true
-                            )
+                            app.name.contains(query, ignoreCase = true)
                         }
             }
         }
 
-        recyclerView.adapter = CategoryFolderAdapter(
-            filtered
-        ) { category ->
+        recyclerView.adapter = buildAdapter(filtered)
+    }
 
+    private fun buildAdapter(data: List<AppCategory>): CategoryFolderAdapter {
+        return CategoryFolderAdapter(data) { category ->
             parentFragmentManager.beginTransaction()
-                .setCustomAnimations(
-                    android.R.anim.fade_in,
-                    android.R.anim.fade_out
-                )
+                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
                 .replace(
                     (view?.parent as ViewGroup).id,
-                    CategoryDetailFragment(
-                        category.name,
-                        category.apps
-                    )
+                    CategoryDetailFragment(category.name, category.apps)
                 )
                 .addToBackStack(null)
                 .commit()
