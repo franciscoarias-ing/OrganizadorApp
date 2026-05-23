@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -12,10 +14,16 @@ import com.example.organizadorapps.AppAdapter
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.FavoritesManager
-import com.example.organizadorapps.RecentAppsManager
+import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.UiConstants
 
 class FavoritesFragment : Fragment() {
+
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: AppAdapter
+
+    private var favoriteApps: List<InstalledApp> = emptyList()
+    private val filteredApps = mutableListOf<InstalledApp>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -23,81 +31,113 @@ class FavoritesFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
 
-        val allApps =
-            AppRepository.getInstalledLaunchableApps(requireContext())
+        val allApps = AppRepository.getInstalledLaunchableApps(requireContext())
+        val favoritePackages = FavoritesManager.getFavoritePackages(requireContext())
 
-        val favoritePackages =
-            FavoritesManager.getFavoritePackages(requireContext())
-
-        val recentPackages =
-            RecentAppsManager.getRecentPackageNames(requireContext())
-
-        val favoriteApps = allApps
+        favoriteApps = allApps
             .filter { favoritePackages.contains(it.packageName) }
-            .sortedBy { app ->
-                val index = recentPackages.indexOf(app.packageName)
-                if (index == -1) Int.MAX_VALUE else index
-            }
+            .sortedBy { it.name.lowercase() }
+
+        filteredApps.clear()
+        filteredApps.addAll(favoriteApps)
+
+        val scroll = ScrollView(requireContext()).apply {
+            setBackgroundColor(UiConstants.BACKGROUND)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isFillViewport = true
+        }
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(UiConstants.BACKGROUND)
-
             setPadding(
-                UiConstants.SCREEN_PADDING,
-                UiConstants.TOP_PADDING,
-                UiConstants.SCREEN_PADDING,
-                24
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 42),
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 24)
             )
         }
 
-        root.addView(AppUiUtils.kicker(requireContext(), "Personal"))
-        root.addView(AppUiUtils.title(requireContext(), "Favoritos"))
+        root.addView(
+            AppUiUtils.smallGreeting(
+                requireContext(),
+                "Acceso rápido"
+            )
+        )
+
+        root.addView(
+            AppUiUtils.title(
+                requireContext(),
+                "Favoritos"
+            )
+        )
 
         root.addView(
             AppUiUtils.subtitle(
                 requireContext(),
-                if (favoriteApps.isEmpty()) {
-                    "Todavía no tienes favoritos"
-                } else {
-                    "${favoriteApps.size} apps favoritas"
-                }
+                "${favoriteApps.size} apps favoritas"
             )
         )
 
+        root.addView(searchBox())
+
         if (favoriteApps.isEmpty()) {
-
             root.addView(
-                AppUiUtils.actionCard(
-                    context = requireContext(),
-                    title = "Agrega favoritos",
-                    subtitle = "Mantén presionada una app para guardarla aquí.",
-                    icon = "★"
-                ) {}
+                AppUiUtils.miniEmpty(
+                    requireContext(),
+                    "Mantén presionada una app para agregarla a favoritos."
+                )
             )
-
         } else {
+            recyclerView = RecyclerView(requireContext()).apply {
+                layoutManager = GridLayoutManager(requireContext(), 2)
+                overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+                isNestedScrollingEnabled = false
 
-            root.addView(
-                RecyclerView(requireContext()).apply {
+                adapter = AppAdapter(
+                    filteredApps,
+                    AppAdapter.Mode.GRID
+                ).also {
+                    this@FavoritesFragment.adapter = it
+                }
 
-                    layoutManager =
-                        GridLayoutManager(requireContext(), 4)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
 
-                    adapter = AppAdapter(favoriteApps)
+            root.addView(recyclerView)
+        }
 
-                    overScrollMode =
-                        RecyclerView.OVER_SCROLL_NEVER
+        scroll.addView(root)
+        return scroll
+    }
 
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        0,
-                        1f
-                    )
+    private fun searchBox(): EditText {
+        return AppUiUtils.searchBox(
+            context = requireContext(),
+            hintValue = "Buscar favoritos...",
+            onTextChanged = { query ->
+                filterFavorites(query)
+            }
+        )
+    }
+
+    private fun filterFavorites(query: String) {
+        if (!::adapter.isInitialized) return
+
+        filteredApps.clear()
+
+        if (query.isBlank()) {
+            filteredApps.addAll(favoriteApps)
+        } else {
+            filteredApps.addAll(
+                favoriteApps.filter {
+                    it.name.contains(query, ignoreCase = true)
                 }
             )
         }
 
-        return root
+        adapter.notifyDataSetChanged()
     }
 }

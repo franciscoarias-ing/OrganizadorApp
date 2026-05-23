@@ -1,28 +1,29 @@
 package com.example.organizadorapps.ui
 
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.organizadorapps.AppCategory
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
-import com.example.organizadorapps.CategoryAdapter
+import com.example.organizadorapps.CategoryFolderAdapter
 import com.example.organizadorapps.CategorySuggestionEngine
-import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.UiConstants
 
 class CategoriesFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var allApps: List<InstalledApp>
+
+    private lateinit var adapter: CategoryFolderAdapter
+
+    private var categories: List<AppCategory> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -30,99 +31,151 @@ class CategoriesFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
 
-        allApps = AppRepository.getInstalledLaunchableApps(requireContext())
+        val apps = AppRepository
+            .getInstalledLaunchableApps(requireContext())
+
+        categories = CategorySuggestionEngine
+            .categorizeApps(apps)
+            .filter { it.apps.isNotEmpty() }
+
+        val scroll = ScrollView(requireContext()).apply {
+            setBackgroundColor(UiConstants.BACKGROUND)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isFillViewport = true
+        }
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(UiConstants.BACKGROUND)
+
             setPadding(
-                UiConstants.SCREEN_PADDING,
-                UiConstants.TOP_PADDING,
-                UiConstants.SCREEN_PADDING,
-                24
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 42),
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 24)
             )
         }
 
-        root.addView(AppUiUtils.kicker(requireContext(), "Explorar"))
-        root.addView(AppUiUtils.title(requireContext(), "Categorías"))
+        root.addView(
+            AppUiUtils.smallGreeting(
+                requireContext(),
+                "Organización inteligente"
+            )
+        )
+
+        root.addView(
+            AppUiUtils.title(
+                requireContext(),
+                "Categorías"
+            )
+        )
 
         root.addView(
             AppUiUtils.subtitle(
                 requireContext(),
-                "Apps organizadas automáticamente."
+                "Tus apps agrupadas automáticamente"
             )
         )
 
         root.addView(searchBox())
 
         recyclerView = RecyclerView(requireContext()).apply {
-            layoutManager = LinearLayoutManager(requireContext())
+
+            // Cambio importante:
+            // ahora 2 columnas premium.
+            layoutManager = GridLayoutManager(requireContext(), 2)
+
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+
+            isNestedScrollingEnabled = false
+
+            adapter = CategoryFolderAdapter(
+                categories
+            ) { category ->
+
+                parentFragmentManager.beginTransaction()
+                    .setCustomAnimations(
+                        android.R.anim.fade_in,
+                        android.R.anim.fade_out
+                    )
+                    .replace(
+                        (view?.parent as ViewGroup).id,
+                        CategoryDetailFragment(
+                            category.name,
+                            category.apps
+                        )
+                    )
+                    .addToBackStack(null)
+                    .commit()
+            }.also {
+                this@CategoriesFragment.adapter = it
+            }
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
-        root.addView(
-            recyclerView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
+        root.addView(recyclerView)
 
-        renderCategories(allApps)
+        scroll.addView(root)
 
-        return root
+        return scroll
     }
 
     private fun searchBox(): EditText {
+
         return AppUiUtils.searchBox(
-            requireContext(),
-            "Buscar apps..."
-        ).apply {
-
-            addTextChangedListener(object : TextWatcher {
-
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {}
-
-                override fun onTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) {
-
-                    val query = s.toString().trim().lowercase()
-
-                    val filteredApps =
-                        if (query.isEmpty()) {
-                            allApps
-                        } else {
-                            allApps.filter {
-                                it.name.lowercase().contains(query) ||
-                                        it.packageName.lowercase().contains(query)
-                            }
-                        }
-
-                    renderCategories(filteredApps)
-                }
-
-                override fun afterTextChanged(s: Editable?) {}
-            })
-        }
+            context = requireContext(),
+            hintValue = "Buscar apps...",
+            onTextChanged = { query ->
+                filterCategories(query)
+            }
+        )
     }
 
-    private fun renderCategories(apps: List<InstalledApp>) {
+    private fun filterCategories(query: String) {
 
-        val categories: List<AppCategory> =
-            CategorySuggestionEngine.categorizeApps(apps)
+        val filtered = if (query.isBlank()) {
 
-        recyclerView.adapter = CategoryAdapter(
-            categories.filter { it.apps.isNotEmpty() }
-        )
+            categories
+
+        } else {
+
+            categories.filter { category ->
+
+                category.name.contains(
+                    query,
+                    ignoreCase = true
+                ) ||
+
+                        category.apps.any { app ->
+                            app.name.contains(
+                                query,
+                                ignoreCase = true
+                            )
+                        }
+            }
+        }
+
+        recyclerView.adapter = CategoryFolderAdapter(
+            filtered
+        ) { category ->
+
+            parentFragmentManager.beginTransaction()
+                .setCustomAnimations(
+                    android.R.anim.fade_in,
+                    android.R.anim.fade_out
+                )
+                .replace(
+                    (view?.parent as ViewGroup).id,
+                    CategoryDetailFragment(
+                        category.name,
+                        category.apps
+                    )
+                )
+                .addToBackStack(null)
+                .commit()
+        }
     }
 }

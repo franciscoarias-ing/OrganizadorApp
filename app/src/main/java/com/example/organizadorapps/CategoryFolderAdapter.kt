@@ -22,18 +22,33 @@ class CategoryFolderAdapter(
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(14, 14, 14, 14)
             isClickable = true
             isFocusable = true
 
+            // Folder más grande y premium, como la imagen objetivo.
+            setPadding(
+                AppUiUtils.dp(context, 14),
+                AppUiUtils.dp(context, 16),
+                AppUiUtils.dp(context, 14),
+                AppUiUtils.dp(context, 16)
+            )
+
             background = GradientDrawable().apply {
                 setColor(UiConstants.SURFACE)
-                cornerRadius = 28f
+                cornerRadius = AppUiUtils.dp(context, 22).toFloat()
                 setStroke(1, UiConstants.BORDER)
             }
 
-            layoutParams = ViewGroup.MarginLayoutParams(175, 190).apply {
-                setMargins(8, 8, 8, 14)
+            layoutParams = ViewGroup.MarginLayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                AppUiUtils.dp(context, 168)
+            ).apply {
+                setMargins(
+                    AppUiUtils.dp(context, 7),
+                    AppUiUtils.dp(context, 7),
+                    AppUiUtils.dp(context, 7),
+                    AppUiUtils.dp(context, 10)
+                )
             }
         }
 
@@ -55,6 +70,20 @@ class CategoryFolderAdapter(
         val iconGrid = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(UiConstants.SURFACE_ALT)
+                cornerRadius = AppUiUtils.dp(context, 20).toFloat()
+            }
+            setPadding(
+                AppUiUtils.dp(context, 10),
+                AppUiUtils.dp(context, 10),
+                AppUiUtils.dp(context, 10),
+                AppUiUtils.dp(context, 10)
+            )
+            layoutParams = LinearLayout.LayoutParams(
+                AppUiUtils.dp(context, 88),
+                AppUiUtils.dp(context, 88)
+            )
         }
 
         val row1 = LinearLayout(context).apply {
@@ -65,39 +94,75 @@ class CategoryFolderAdapter(
             gravity = Gravity.CENTER
         }
 
-        category.apps.take(4).forEachIndexed { index, app ->
-            val icon = ImageView(context).apply {
-                setImageDrawable(app.icon)
-                layoutParams = LinearLayout.LayoutParams(36, 36).apply {
-                    setMargins(4, 4, 4, 4)
+        if (category.name == "Todas las apps") {
+            repeat(9) {
+                row1.addView(dot(context))
+                if (it == 2) {
+                    iconGrid.addView(row1)
                 }
             }
+            repeat(6) {
+                row2.addView(dot(context))
+            }
+            iconGrid.addView(row2)
+        } else {
+            category.apps.take(4).forEachIndexed { index, app ->
+                val icon = ImageView(context).apply {
+                    setImageDrawable(app.icon)
+                    layoutParams = LinearLayout.LayoutParams(
+                        AppUiUtils.dp(context, 30),
+                        AppUiUtils.dp(context, 30)
+                    ).apply {
+                        setMargins(
+                            AppUiUtils.dp(context, 4),
+                            AppUiUtils.dp(context, 4),
+                            AppUiUtils.dp(context, 4),
+                            AppUiUtils.dp(context, 4)
+                        )
+                    }
+                }
 
-            if (index < 2) row1.addView(icon) else row2.addView(icon)
+                if (index < 2) row1.addView(icon) else row2.addView(icon)
+            }
+
+            iconGrid.addView(row1)
+            iconGrid.addView(row2)
         }
-
-        iconGrid.addView(row1)
-        iconGrid.addView(row2)
 
         holder.layout.addView(iconGrid)
 
         holder.layout.addView(TextView(context).apply {
             text = category.name
-            textSize = 14f
+            textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(UiConstants.TEXT_PRIMARY)
             gravity = Gravity.CENTER
-            setPadding(0, 10, 0, 0)
+            includeFontPadding = false
             maxLines = 1
+            setPadding(0, AppUiUtils.dp(context, 14), 0, 0)
         })
 
         holder.layout.addView(TextView(context).apply {
             text = "${category.apps.size} apps"
-            textSize = 12f
+            textSize = 13f
             setTextColor(UiConstants.TEXT_SECONDARY)
             gravity = Gravity.CENTER
-            setPadding(0, 3, 0, 0)
+            includeFontPadding = false
+            setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
         })
+    }
+
+    private fun dot(context: android.content.Context): TextView {
+        return TextView(context).apply {
+            text = "●"
+            textSize = 14f
+            setTextColor(UiConstants.ACCENT)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                AppUiUtils.dp(context, 18),
+                AppUiUtils.dp(context, 18)
+            )
+        }
     }
 
     override fun getItemCount(): Int = categories.size

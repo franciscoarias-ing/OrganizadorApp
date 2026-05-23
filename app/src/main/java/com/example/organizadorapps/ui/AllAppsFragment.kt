@@ -1,13 +1,13 @@
 package com.example.organizadorapps.ui
 
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +20,12 @@ import com.example.organizadorapps.UiConstants
 class AllAppsFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var allApps: List<InstalledApp>
+
+    private var allApps: List<InstalledApp> = emptyList()
+
+    private var filteredApps: MutableList<InstalledApp> = mutableListOf()
+
+    private lateinit var adapter: AppAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,88 +34,110 @@ class AllAppsFragment : Fragment() {
     ): View {
 
         allApps = AppRepository.getInstalledLaunchableApps(requireContext())
+            .sortedBy { it.name.lowercase() }
+
+        filteredApps = allApps.toMutableList()
+
+        val scroll = ScrollView(requireContext()).apply {
+            setBackgroundColor(UiConstants.BACKGROUND)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isFillViewport = true
+        }
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(UiConstants.BACKGROUND)
+
             setPadding(
-                UiConstants.SCREEN_PADDING,
-                UiConstants.TOP_PADDING,
-                UiConstants.SCREEN_PADDING,
-                24
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 42),
+                AppUiUtils.dp(requireContext(), 22),
+                AppUiUtils.dp(requireContext(), 24)
             )
         }
 
-        root.addView(AppUiUtils.kicker(requireContext(), "Biblioteca"))
-        root.addView(AppUiUtils.title(requireContext(), "Todas las apps"))
+        root.addView(
+            AppUiUtils.smallGreeting(
+                requireContext(),
+                "Explora tus apps"
+            )
+        )
+
+        root.addView(
+            AppUiUtils.title(
+                requireContext(),
+                "Todas las apps"
+            )
+        )
 
         root.addView(
             AppUiUtils.subtitle(
                 requireContext(),
-                "${allApps.size} apps detectadas"
+                "${allApps.size} aplicaciones detectadas automáticamente"
             )
         )
 
         root.addView(searchBox())
 
         recyclerView = RecyclerView(requireContext()).apply {
-            layoutManager = GridLayoutManager(requireContext(), 4)
-            adapter = AppAdapter(allApps)
+
+            // 2 columnas premium.
+            layoutManager = GridLayoutManager(requireContext(), 2)
+
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+
+            isNestedScrollingEnabled = false
+
+            adapter = AppAdapter(
+                filteredApps,
+                AppAdapter.Mode.GRID
+            ).also {
+                this@AllAppsFragment.adapter = it
+            }
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
-        root.addView(
-            recyclerView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        )
+        root.addView(recyclerView)
 
-        return root
+        scroll.addView(root)
+
+        return scroll
     }
 
     private fun searchBox(): EditText {
 
         return AppUiUtils.searchBox(
-            requireContext(),
-            "Buscar apps..."
-        ).apply {
+            context = requireContext(),
+            hintValue = "Buscar apps...",
+            onTextChanged = { query ->
+                filterApps(query)
+            }
+        )
+    }
 
-            addTextChangedListener(object : TextWatcher {
+    private fun filterApps(query: String) {
 
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {}
+        filteredApps.clear()
 
-                override fun onTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) {
+        if (query.isBlank()) {
 
-                    val query = s.toString().trim().lowercase()
+            filteredApps.addAll(allApps)
 
-                    val filteredApps =
-                        if (query.isEmpty()) {
-                            allApps
-                        } else {
-                            allApps.filter {
-                                it.name.lowercase().contains(query) ||
-                                        it.packageName.lowercase().contains(query)
-                            }
-                        }
+        } else {
 
-                    recyclerView.adapter = AppAdapter(filteredApps)
+            filteredApps.addAll(
+                allApps.filter {
+                    it.name.contains(
+                        query,
+                        ignoreCase = true
+                    )
                 }
-
-                override fun afterTextChanged(s: Editable?) {}
-            })
+            )
         }
+
+        adapter.notifyDataSetChanged()
     }
 }

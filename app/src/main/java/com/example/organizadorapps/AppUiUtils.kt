@@ -1,41 +1,105 @@
 package com.example.organizadorapps
-
-import android.graphics.Color
+import android.text.Editable
+import android.text.TextWatcher
+import android.R.attr.singleLine
+import android.content.Context
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.content.Context
 
 object AppUiUtils {
 
-    val backgroundColor = Color.parseColor("#0F1115")
-    val cardColor = Color.parseColor("#1A1F2B")
-    val borderColor = Color.parseColor("#2B3140")
-    val subtitleColor = Color.parseColor("#8F96A3")
-    val textColor = Color.WHITE
+    fun dp(context: Context, value: Int): Int {
+        return (value * context.resources.displayMetrics.density).toInt()
+    }
 
     fun title(context: Context, textValue: String): TextView {
         return TextView(context).apply {
             text = textValue
-            textSize = 30f
-            setTextColor(textColor)
+            textSize = 34f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(UiConstants.TEXT_PRIMARY)
+            includeFontPadding = false
+            setPadding(0, dp(context, 8), 0, 0)
         }
     }
+
     fun smallGreeting(context: Context, textValue: String): TextView {
         return TextView(context).apply {
             text = textValue
             textSize = 16f
             setTextColor(UiConstants.TEXT_PRIMARY)
-            setPadding(0, 0, 0, 10)
+            includeFontPadding = false
         }
     }
-    fun favoriteCard(): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(UiConstants.SURFACE_ALT)
-            cornerRadius = UiConstants.SMALL_CARD_RADIUS
-            setStroke(2, UiConstants.GOLD)
+    fun subtitleColor(): Int {
+        return UiConstants.TEXT_SECONDARY
+    }
+    fun subtitle(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 16f
+            setTextColor(UiConstants.TEXT_SECONDARY)
+            includeFontPadding = false
+            setPadding(0, dp(context, 12), 0, dp(context, 24))
         }
+    }
+    fun kicker(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 14f
+            setTextColor(UiConstants.ACCENT)
+            includeFontPadding = false
+            setPadding(0, dp(context, 6), 0, dp(context, 8))
+        }
+    }
+
+    fun searchBox(
+        context: Context,
+        hintValue: String,
+        onTextChanged: (String) -> Unit
+    ): EditText {
+        return EditText(context).apply {
+            hint = hintValue
+            textSize = 16f
+            setTextColor(UiConstants.TEXT_PRIMARY)
+            setHintTextColor(UiConstants.TEXT_MUTED)
+            isSingleLine = true
+            background = glassCard()
+            setPadding(
+                dp(context, 20),
+                0,
+                dp(context, 20),
+                0
+            )
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(context, 58)
+            ).apply {
+                setMargins(0, 0, 0, dp(context, 18))
+            }
+
+            addTextChangedListenerCompat {
+                onTextChanged(it)
+            }
+        }
+    }
+
+    fun EditText.addTextChangedListenerCompat(onChanged: (String) -> Unit) {
+        this.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                onChanged(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     fun glassCard(): GradientDrawable {
@@ -45,16 +109,24 @@ object AppUiUtils {
             setStroke(1, UiConstants.BORDER)
         }
     }
-    fun kicker(context: Context, textValue: String): TextView {
-        return TextView(context).apply {
-            text = textValue.uppercase()
-            textSize = 12f
-            letterSpacing = 0.12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setTextColor(UiConstants.ACCENT)
-            setPadding(0, 0, 0, 8)
+
+    fun roundedCard(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE)
+            cornerRadius = 28f
+            setStroke(1, UiConstants.BORDER)
         }
     }
+
+    fun favoriteCard(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE_ALT)
+            cornerRadius = 28f
+            setStroke(2, UiConstants.GOLD)
+        }
+    }
+
+
 
     fun searchButton(
         context: Context,
@@ -63,36 +135,36 @@ object AppUiUtils {
     ): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(24, 0, 24, 0)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(context, 22), 0, dp(context, 22), 0)
+            background = glassCard()
             isClickable = true
             isFocusable = true
-            background = glassCard()
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                88
+                dp(context, 64)
             ).apply {
-                setMargins(0, 0, 0, 22)
+                setMargins(0, 0, 0, dp(context, 18))
             }
 
             setOnClickListener {
-                AnimationUtils.press(this) {
-                    onClick()
-                }
+                AnimationUtils.press(this) { onClick() }
             }
 
             addView(TextView(context).apply {
                 text = "⌕"
-                textSize = 30f
+                textSize = 32f
                 setTextColor(UiConstants.ACCENT)
-                layoutParams = LinearLayout.LayoutParams(62, LinearLayout.LayoutParams.WRAP_CONTENT)
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(dp(context, 48), LinearLayout.LayoutParams.WRAP_CONTENT)
             })
 
             addView(TextView(context).apply {
                 text = hint
                 textSize = 18f
                 setTextColor(UiConstants.TEXT_MUTED)
+                includeFontPadding = false
             })
         }
     }
@@ -105,7 +177,7 @@ object AppUiUtils {
     ): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = android.view.Gravity.CENTER
+            gravity = Gravity.CENTER
             isClickable = true
             isFocusable = true
 
@@ -116,32 +188,29 @@ object AppUiUtils {
             )
 
             setOnClickListener {
-                AnimationUtils.press(this) {
-                    onClick()
-                }
+                AnimationUtils.press(this) { onClick() }
             }
 
             addView(TextView(context).apply {
                 text = icon
-                textSize = 27f
+                textSize = 28f
                 setTextColor(UiConstants.ACCENT)
-                gravity = android.view.Gravity.CENTER
-
+                gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
                     setColor(UiConstants.ACCENT_SOFT)
-                    cornerRadius = 28f
+                    cornerRadius = dp(context, 24).toFloat()
                 }
-
-                layoutParams = LinearLayout.LayoutParams(56, 56)
+                layoutParams = LinearLayout.LayoutParams(dp(context, 52), dp(context, 52))
             })
 
             addView(TextView(context).apply {
                 text = label
-                textSize = 12f
+                textSize = 13f
                 setTextColor(UiConstants.TEXT_PRIMARY)
-                gravity = android.view.Gravity.CENTER
-                setPadding(0, 8, 0, 0)
-                maxLines = 1
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                maxLines = 2
+                setPadding(0, dp(context, 10), 0, 0)
             })
         }
     }
@@ -154,36 +223,31 @@ object AppUiUtils {
     ): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, 8, 0, 12)
+                setMargins(0, dp(context, 18), 0, dp(context, 12))
             }
 
             addView(TextView(context).apply {
                 text = title
-                textSize = 19f
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                textSize = 21f
+                typeface = Typeface.DEFAULT_BOLD
                 setTextColor(UiConstants.TEXT_PRIMARY)
-
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
+                includeFontPadding = false
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
 
             addView(TextView(context).apply {
                 text = actionText
-                textSize = 14f
+                textSize = 15f
                 setTextColor(UiConstants.ACCENT)
-                setPadding(16, 8, 0, 8)
-                setOnClickListener {
-                    onActionClick()
-                }
+                includeFontPadding = false
+                setPadding(dp(context, 16), dp(context, 8), 0, dp(context, 8))
+                setOnClickListener { onActionClick() }
             })
         }
     }
@@ -191,138 +255,19 @@ object AppUiUtils {
     fun miniEmpty(context: Context, textValue: String): TextView {
         return TextView(context).apply {
             text = textValue
-            textSize = 13f
-            setTextColor(UiConstants.TEXT_SECONDARY)
-            setPadding(0, 0, 0, 18)
-        }
-    }
-
-    fun subtitle(context: Context, textValue: String): TextView {
-        return TextView(context).apply {
-            text = textValue
             textSize = 14f
-            setTextColor(subtitleColor)
-            setPadding(0, 8, 0, 24)
+            setTextColor(UiConstants.TEXT_SECONDARY)
+            setPadding(0, dp(context, 8), 0, dp(context, 18))
         }
     }
 
-    fun searchBox(context: Context, hintText: String): EditText {
-        return EditText(context).apply {
-            hint = hintText
-            textSize = 15f
-            setHintTextColor(subtitleColor)
-            setTextColor(textColor)
-            setSingleLine(true)
-            setPadding(28, 0, 28, 0)
 
-            background = GradientDrawable().apply {
-                setColor(cardColor)
-                cornerRadius = 24f
-                setStroke(1, borderColor)
+    fun verticalDivider(context: Context): View {
+        return View(context).apply {
+            setBackgroundColor(UiConstants.BORDER)
+            layoutParams = LinearLayout.LayoutParams(dp(context, 1), dp(context, 56)).apply {
+                setMargins(dp(context, 8), 0, dp(context, 8), 0)
             }
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                96
-            ).apply {
-                setMargins(0, 0, 0, 24)
-            }
-        }
-    }
-
-    fun actionCard(
-        context: Context,
-        title: String,
-        subtitle: String,
-        icon: String,
-        onClick: () -> Unit
-    ): LinearLayout {
-
-        return LinearLayout(context).apply {
-
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-
-            setPadding(24, 22, 24, 22)
-
-            isClickable = true
-            isFocusable = true
-
-            background = glassCard()
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                120
-            ).apply {
-                setMargins(0, 0, 0, 16)
-            }
-
-            setOnClickListener {
-                AnimationUtils.press(this) {
-                    onClick()
-                }
-            }
-
-            addView(TextView(context).apply {
-
-                text = icon
-                textSize = 28f
-
-                gravity = android.view.Gravity.CENTER
-
-                setTextColor(UiConstants.ACCENT)
-
-                background = GradientDrawable().apply {
-                    setColor(UiConstants.ACCENT_SOFT)
-                    cornerRadius = 24f
-                }
-
-                layoutParams = LinearLayout.LayoutParams(
-                    60,
-                    60
-                ).apply {
-                    marginEnd = 18
-                }
-            })
-
-            addView(LinearLayout(context).apply {
-
-                orientation = LinearLayout.VERTICAL
-
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-
-                addView(TextView(context).apply {
-                    text = title
-                    textSize = 16f
-                    typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    setTextColor(UiConstants.TEXT_PRIMARY)
-                })
-
-                addView(TextView(context).apply {
-                    text = subtitle
-                    textSize = 13f
-                    setTextColor(UiConstants.TEXT_SECONDARY)
-                    setPadding(0, 4, 0, 0)
-                })
-            })
-
-            addView(TextView(context).apply {
-                text = "›"
-                textSize = 28f
-                setTextColor(UiConstants.TEXT_MUTED)
-            })
-        }
-    }
-
-    fun roundedCard(): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(cardColor)
-            cornerRadius = 28f
-            setStroke(1, borderColor)
         }
     }
 }
