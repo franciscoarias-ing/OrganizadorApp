@@ -1,12 +1,14 @@
 package com.example.organizadorapps
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
@@ -22,11 +24,7 @@ class AppAdapter(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(16, 16, 16, 16)
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#1A1F2B"))
-                cornerRadius = 28f
-                setStroke(1, Color.parseColor("#2B3140"))
-            }
+            background = cardBackground(false)
             isClickable = true
             isFocusable = true
 
@@ -41,11 +39,26 @@ class AppAdapter(
     override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
         val app = apps[position]
         val context = holder.layout.context
+        val isFavorite = FavoritesManager.isFavorite(context, app.packageName)
 
         holder.layout.removeAllViews()
+        holder.layout.background = cardBackground(isFavorite)
 
         holder.layout.setOnClickListener {
             AppLauncher.openApp(context, app.packageName, app.name)
+        }
+
+        holder.layout.setOnLongClickListener {
+            if (FavoritesManager.isFavorite(context, app.packageName)) {
+                FavoritesManager.removeFavorite(context, app.packageName)
+                Toast.makeText(context, "${app.name} quitada de favoritos", Toast.LENGTH_SHORT).show()
+            } else {
+                FavoritesManager.addFavorite(context, app.packageName)
+                Toast.makeText(context, "${app.name} agregada a favoritos", Toast.LENGTH_SHORT).show()
+            }
+
+            notifyItemChanged(position)
+            true
         }
 
         holder.layout.addView(ImageView(context).apply {
@@ -54,8 +67,9 @@ class AppAdapter(
         })
 
         holder.layout.addView(TextView(context).apply {
-            text = app.name
+            text = if (isFavorite) "★ ${app.name}" else app.name
             textSize = 12f
+            typeface = if (isFavorite) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
             setTextColor(Color.parseColor("#E5E7EB"))
             gravity = Gravity.CENTER
             setPadding(0, 14, 0, 0)
@@ -64,4 +78,15 @@ class AppAdapter(
     }
 
     override fun getItemCount(): Int = apps.size
+
+    private fun cardBackground(isFavorite: Boolean): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(Color.parseColor(if (isFavorite) "#252D3D" else "#1A1F2B"))
+            cornerRadius = 28f
+            setStroke(
+                if (isFavorite) 2 else 1,
+                Color.parseColor(if (isFavorite) "#D6A84F" else "#2B3140")
+            )
+        }
+    }
 }
