@@ -54,10 +54,14 @@ class CategoriesFragment : Fragment() {
         })
 
         rootLayout.addView(searchBox())
-
         recyclerView = RecyclerView(requireContext()).apply {
             layoutManager = LinearLayoutManager(requireContext())
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
         }
 
         rootLayout.addView(recyclerView)
