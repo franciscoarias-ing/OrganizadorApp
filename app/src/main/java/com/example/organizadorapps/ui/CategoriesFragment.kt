@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import com.example.organizadorapps.AppCategory
+import com.example.organizadorapps.CategoryRules
 import com.example.organizadorapps.InstalledApp
 
 class CategoriesFragment : Fragment() {
@@ -48,41 +49,22 @@ class CategoriesFragment : Fragment() {
         layout.addView(title)
         layout.addView(subtitle)
 
-        val categories = listOf(
+        val categories = CategoryRules.rules.map { rule ->
 
             AppCategory(
-                "Social",
-                apps.filter {
-                    it.name.contains("WhatsApp", true) ||
-                            it.name.contains("Instagram", true) ||
-                            it.name.contains("Telegram", true) ||
-                            it.name.contains("Facebook", true) ||
-                            it.name.contains("TikTok", true)
-                }
-            ),
+                rule.key,
 
-            AppCategory(
-                "Google",
-                apps.filter {
-                    it.name.contains("Google", true) ||
-                            it.name.contains("Chrome", true) ||
-                            it.name.contains("Gmail", true) ||
-                            it.name.contains("Maps", true) ||
-                            it.name.contains("Drive", true) ||
-                            it.name.contains("YouTube", true)
-                }
-            ),
+                apps.filter { app ->
 
-            AppCategory(
-                "Multimedia",
-                apps.filter {
-                    it.name.contains("Spotify", true) ||
-                            it.name.contains("Netflix", true) ||
-                            it.name.contains("Prime", true) ||
-                            it.name.contains("Music", true)
+                    val searchable =
+                        "${app.name} ${app.packageName}".lowercase()
+
+                    rule.value.any { keyword ->
+                        searchable.contains(keyword)
+                    }
                 }
             )
-        )
+        }
 
         categories.forEach { category ->
 
