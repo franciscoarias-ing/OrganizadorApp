@@ -246,8 +246,8 @@ object AppUiUtils {
 
             layoutParams = LinearLayout.LayoutParams(
                 0,
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                1f
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1fGIT
             )
 
             setOnClickListener {
@@ -256,7 +256,7 @@ object AppUiUtils {
 
             addView(TextView(context).apply {
                 text = icon
-                textSize = 28f
+                textSize = 25f
                 setTextColor(UiConstants.ACCENT)
                 gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
@@ -268,7 +268,7 @@ object AppUiUtils {
 
             addView(TextView(context).apply {
                 text = label
-                textSize = 13f
+                textSize = 12f
                 setTextColor(UiConstants.TEXT_PRIMARY)
                 gravity = Gravity.CENTER
                 includeFontPadding = false
