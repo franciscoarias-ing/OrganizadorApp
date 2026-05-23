@@ -2,7 +2,6 @@ package com.example.organizadorapps
 
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -24,11 +23,11 @@ class AppAdapter(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(12, 12, 12, 12)
-            background = cardBackground(false)
+            background = AppUiUtils.roundedCard()
             isClickable = true
             isFocusable = true
 
-            layoutParams = ViewGroup.MarginLayoutParams(170, 205).apply {
+            layoutParams = ViewGroup.MarginLayoutParams(168, 198).apply {
                 setMargins(8, 8, 8, 8)
             }
         }
@@ -42,25 +41,15 @@ class AppAdapter(
         val isFavorite = FavoritesManager.isFavorite(context, app.packageName)
 
         holder.layout.removeAllViews()
-        holder.layout.background = cardBackground(isFavorite)
+        holder.layout.background =
+            if (isFavorite) AppUiUtils.favoriteCard() else AppUiUtils.roundedCard()
 
         holder.layout.setOnClickListener {
             RecentAppsManager.registerAppOpen(context, app)
 
-            holder.layout.animate()
-                .scaleX(0.96f)
-                .scaleY(0.96f)
-                .setDuration(70)
-                .withEndAction {
-                    holder.layout.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(70)
-                        .start()
-
-                    AppLauncher.openApp(context, app.packageName, app.name)
-                }
-                .start()
+            AnimationUtils.press(holder.layout) {
+                AppLauncher.openApp(context, app.packageName, app.name)
+            }
         }
 
         holder.layout.setOnLongClickListener {
@@ -72,26 +61,14 @@ class AppAdapter(
                 Toast.makeText(context, "${app.name} agregada a favoritos", Toast.LENGTH_SHORT).show()
             }
 
-            holder.layout.animate()
-                .scaleX(1.05f)
-                .scaleY(1.05f)
-                .setDuration(90)
-                .withEndAction {
-                    holder.layout.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(90)
-                        .start()
-                }
-                .start()
-
+            AnimationUtils.pop(holder.layout)
             notifyItemChanged(position)
             true
         }
 
         holder.layout.addView(ImageView(context).apply {
             setImageDrawable(app.icon)
-            layoutParams = LinearLayout.LayoutParams(72, 72)
+            layoutParams = LinearLayout.LayoutParams(74, 74)
         })
 
         holder.layout.addView(TextView(context).apply {
@@ -106,15 +83,4 @@ class AppAdapter(
     }
 
     override fun getItemCount(): Int = apps.size
-
-    private fun cardBackground(isFavorite: Boolean): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(Color.parseColor(if (isFavorite) "#252D3D" else "#1A1F2B"))
-            cornerRadius = 24f
-            setStroke(
-                if (isFavorite) 2 else 1,
-                Color.parseColor(if (isFavorite) "#D6A84F" else "#2B3140")
-            )
-        }
-    }
 }

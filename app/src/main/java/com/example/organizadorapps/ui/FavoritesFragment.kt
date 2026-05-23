@@ -13,6 +13,7 @@ import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.FavoritesManager
 import com.example.organizadorapps.RecentAppsManager
+import com.example.organizadorapps.UiConstants
 
 class FavoritesFragment : Fragment() {
 
@@ -21,9 +22,15 @@ class FavoritesFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val allApps = AppRepository.getInstalledLaunchableApps(requireContext())
-        val favoritePackages = FavoritesManager.getFavoritePackages(requireContext())
-        val recentPackages = RecentAppsManager.getRecentPackageNames(requireContext())
+
+        val allApps =
+            AppRepository.getInstalledLaunchableApps(requireContext())
+
+        val favoritePackages =
+            FavoritesManager.getFavoritePackages(requireContext())
+
+        val recentPackages =
+            RecentAppsManager.getRecentPackageNames(requireContext())
 
         val favoriteApps = allApps
             .filter { favoritePackages.contains(it.packageName) }
@@ -34,17 +41,24 @@ class FavoritesFragment : Fragment() {
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(AppUiUtils.backgroundColor)
-            setPadding(24, 42, 24, 24)
+            setBackgroundColor(UiConstants.BACKGROUND)
+
+            setPadding(
+                UiConstants.SCREEN_PADDING,
+                UiConstants.TOP_PADDING,
+                UiConstants.SCREEN_PADDING,
+                24
+            )
         }
 
+        root.addView(AppUiUtils.kicker(requireContext(), "Personal"))
         root.addView(AppUiUtils.title(requireContext(), "Favoritos"))
 
         root.addView(
             AppUiUtils.subtitle(
                 requireContext(),
                 if (favoriteApps.isEmpty()) {
-                    "Accesos rápidos todavía vacíos"
+                    "Todavía no tienes favoritos"
                 } else {
                     "${favoriteApps.size} apps favoritas"
                 }
@@ -52,18 +66,28 @@ class FavoritesFragment : Fragment() {
         )
 
         if (favoriteApps.isEmpty()) {
+
             root.addView(
-                AppUiUtils.subtitle(
-                    requireContext(),
-                    "Mantén presionada una app en Categorías o Todas las apps para guardarla aquí."
-                )
+                AppUiUtils.actionCard(
+                    context = requireContext(),
+                    title = "Agrega favoritos",
+                    subtitle = "Mantén presionada una app para guardarla aquí.",
+                    icon = "★"
+                ) {}
             )
+
         } else {
+
             root.addView(
                 RecyclerView(requireContext()).apply {
-                    layoutManager = GridLayoutManager(requireContext(), 4)
+
+                    layoutManager =
+                        GridLayoutManager(requireContext(), 4)
+
                     adapter = AppAdapter(favoriteApps)
-                    overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+
+                    overScrollMode =
+                        RecyclerView.OVER_SCROLL_NEVER
 
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,

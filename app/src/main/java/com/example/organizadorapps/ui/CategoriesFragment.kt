@@ -17,6 +17,7 @@ import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.CategoryAdapter
 import com.example.organizadorapps.CategorySuggestionEngine
 import com.example.organizadorapps.InstalledApp
+import com.example.organizadorapps.UiConstants
 
 class CategoriesFragment : Fragment() {
 
@@ -28,20 +29,27 @@ class CategoriesFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+
         allApps = AppRepository.getInstalledLaunchableApps(requireContext())
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(AppUiUtils.backgroundColor)
-            setPadding(24, 42, 24, 24)
+            setBackgroundColor(UiConstants.BACKGROUND)
+            setPadding(
+                UiConstants.SCREEN_PADDING,
+                UiConstants.TOP_PADDING,
+                UiConstants.SCREEN_PADDING,
+                24
+            )
         }
 
+        root.addView(AppUiUtils.kicker(requireContext(), "Explorar"))
         root.addView(AppUiUtils.title(requireContext(), "Categorías"))
 
         root.addView(
             AppUiUtils.subtitle(
                 requireContext(),
-                "Apps organizadas automáticamente"
+                "Apps organizadas automáticamente."
             )
         )
 
@@ -69,9 +77,11 @@ class CategoriesFragment : Fragment() {
     private fun searchBox(): EditText {
         return AppUiUtils.searchBox(
             requireContext(),
-            "Buscar por nombre o paquete..."
+            "Buscar apps..."
         ).apply {
+
             addTextChangedListener(object : TextWatcher {
+
                 override fun beforeTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -85,16 +95,18 @@ class CategoriesFragment : Fragment() {
                     before: Int,
                     count: Int
                 ) {
+
                     val query = s.toString().trim().lowercase()
 
-                    val filteredApps = if (query.isEmpty()) {
-                        allApps
-                    } else {
-                        allApps.filter {
-                            it.name.lowercase().contains(query) ||
-                                    it.packageName.lowercase().contains(query)
+                    val filteredApps =
+                        if (query.isEmpty()) {
+                            allApps
+                        } else {
+                            allApps.filter {
+                                it.name.lowercase().contains(query) ||
+                                        it.packageName.lowercase().contains(query)
+                            }
                         }
-                    }
 
                     renderCategories(filteredApps)
                 }
@@ -105,6 +117,7 @@ class CategoriesFragment : Fragment() {
     }
 
     private fun renderCategories(apps: List<InstalledApp>) {
+
         val categories: List<AppCategory> =
             CategorySuggestionEngine.categorizeApps(apps)
 

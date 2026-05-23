@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.RecentAppsManager
+import com.example.organizadorapps.UiConstants
 import com.example.organizadorapps.UsageAppStat
 import com.example.organizadorapps.UsageStatsAdapter
 
@@ -21,14 +22,20 @@ class UsageFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val allApps = AppRepository.getInstalledLaunchableApps(requireContext())
-        val recentPackages = RecentAppsManager.getRecentPackageNames(requireContext())
+
+        val allApps =
+            AppRepository.getInstalledLaunchableApps(requireContext())
+
+        val recentPackages =
+            RecentAppsManager.getRecentPackageNames(requireContext())
 
         val stats = recentPackages
             .groupingBy { it }
             .eachCount()
             .mapNotNull { entry ->
-                val app = allApps.find { it.packageName == entry.key }
+
+                val app =
+                    allApps.find { it.packageName == entry.key }
 
                 app?.let {
                     UsageAppStat(
@@ -41,33 +48,52 @@ class UsageFragment : Fragment() {
             .sortedByDescending { it.openCount }
 
         val root = LinearLayout(requireContext()).apply {
+
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(AppUiUtils.backgroundColor)
-            setPadding(24, 42, 24, 24)
+
+            setBackgroundColor(UiConstants.BACKGROUND)
+
+            setPadding(
+                UiConstants.SCREEN_PADDING,
+                UiConstants.TOP_PADDING,
+                UiConstants.SCREEN_PADDING,
+                24
+            )
         }
 
+        root.addView(AppUiUtils.kicker(requireContext(), "Actividad"))
         root.addView(AppUiUtils.title(requireContext(), "Uso"))
 
         root.addView(
             AppUiUtils.subtitle(
                 requireContext(),
-                "Estadísticas locales de apps abiertas desde OrganizadorApp"
+                "Estadísticas locales generadas desde OrganizadorApp."
             )
         )
 
         if (stats.isEmpty()) {
+
             root.addView(
-                AppUiUtils.subtitle(
-                    requireContext(),
-                    "Abre apps desde OrganizadorApp para generar estadísticas."
-                )
+                AppUiUtils.actionCard(
+                    context = requireContext(),
+                    title = "Sin estadísticas todavía",
+                    subtitle = "Abre apps desde OrganizadorApp para generar actividad.",
+                    icon = "↗"
+                ) {}
             )
+
         } else {
+
             root.addView(
                 RecyclerView(requireContext()).apply {
-                    layoutManager = LinearLayoutManager(requireContext())
+
+                    layoutManager =
+                        LinearLayoutManager(requireContext())
+
                     adapter = UsageStatsAdapter(stats)
-                    overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+
+                    overScrollMode =
+                        RecyclerView.OVER_SCROLL_NEVER
 
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
