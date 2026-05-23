@@ -1,0 +1,66 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/categoryRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <LinearLayout
+        android:id="@+id/folderCard"
+        android:layout_width="match_parent"
+        android:layout_height="112dp"
+        android:background="@drawable/bg_category_folder_dark"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <GridLayout
+            android:id="@+id/iconPreviewGrid"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:columnCount="2"
+            android:rowCount="2"
+            android:useDefaultMargins="false" />
+
+        <TextView
+            android:id="@+id/txtCategoryName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="#F4F7FB"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/txtCategoryCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textColor="#9CA3AF"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/txtExpandArrow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:text="⌄"
+            android:textColor="#8B5CF6"
+            android:textSize="15sp" />
+
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerExpandedApps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:visibility="gone" />
+
+</LinearLayout>

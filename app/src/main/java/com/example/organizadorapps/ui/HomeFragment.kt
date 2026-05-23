@@ -13,18 +13,21 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.organizadorapps.AppAdapter
 import com.example.organizadorapps.AppCategory
+import com.example.organizadorapps.AppLauncher
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.CategoryFolderAdapter
 import com.example.organizadorapps.CategorySuggestionEngine
+import com.example.organizadorapps.ExpandableCategoryItem
 import com.example.organizadorapps.FavoritesManager
+import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.R
 import com.example.organizadorapps.RecentAppsManager
 import com.example.organizadorapps.UiConstants
 
 class HomeFragment : Fragment() {
 
-    private lateinit var allApps: List<com.example.organizadorapps.InstalledApp>
+    private lateinit var allApps: List<InstalledApp>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,9 +47,20 @@ class HomeFragment : Fragment() {
         val categories = CategorySuggestionEngine
             .categorizeApps(allApps)
             .filter { it.apps.isNotEmpty() }
+            .map { category ->
+                ExpandableCategoryItem(
+                    category = category,
+                    isExpanded = false
+                )
+            }
             .toMutableList()
 
-        categories.add(AppCategory("Todas las apps", allApps))
+        categories.add(
+            ExpandableCategoryItem(
+                category = AppCategory("Todas las apps", allApps),
+                isExpanded = false
+            )
+        )
 
         val scroll = ScrollView(requireContext()).apply {
             setBackgroundColor(UiConstants.BACKGROUND)
@@ -170,7 +184,7 @@ class HomeFragment : Fragment() {
 
     private fun addRecentSection(
         root: LinearLayout,
-        apps: List<com.example.organizadorapps.InstalledApp>
+        apps: List<InstalledApp>
     ) {
         root.addView(
             AppUiUtils.sectionRow(requireContext(), "Recientes", "Ver todos", 18, 12) {
@@ -210,7 +224,7 @@ class HomeFragment : Fragment() {
 
     private fun addFavoritesSection(
         root: LinearLayout,
-        apps: List<com.example.organizadorapps.InstalledApp>
+        apps: List<InstalledApp>
     ) {
         root.addView(
             AppUiUtils.sectionRow(requireContext(), "Favoritos rápidos", "Ver todos", 22, 12) {
@@ -252,7 +266,7 @@ class HomeFragment : Fragment() {
 
     private fun addCategorySection(
         root: LinearLayout,
-        categories: List<AppCategory>
+        categories: MutableList<ExpandableCategoryItem>
     ) {
         root.addView(
             AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 24, 12) {
@@ -264,27 +278,59 @@ class HomeFragment : Fragment() {
             }
         )
 
-        root.addView(
-            RecyclerView(requireContext()).apply {
-                layoutManager = GridLayoutManager(requireContext(), 2)
+        val categoryRecycler = RecyclerView(requireContext())
 
-                adapter = CategoryFolderAdapter(categories) { category ->
-                    if (category.name == "Todas las apps") {
-                        openFragment(AllAppsFragment())
-                    } else {
-                        openFragment(CategoryDetailFragment(category.name, category.apps))
-                    }
+        val gridLayoutManager = GridLayoutManager(requireContext(), 4)
+
+        gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int {
+                return if (categories[position].isExpanded) {
+                    4
+                } else {
+                    1
                 }
-
-                overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-                isNestedScrollingEnabled = false
-
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
             }
-        )
+        }
+
+        categoryRecycler.apply {
+            layoutManager = gridLayoutManager
+
+            adapter = CategoryFolderAdapter(
+                categories = categories,
+                onCategoryClick = { item ->
+                    val position = categories.indexOf(item)
+
+                    if (position == -1) return@CategoryFolderAdapter
+
+                    categories.forEachIndexed { index, categoryItem ->
+                        if (index != position) {
+                            categoryItem.isExpanded = false
+                        }
+                    }
+
+                    item.isExpanded = !item.isExpanded
+
+                    adapter?.notifyDataSetChanged()
+                },
+                onAppClick = { app ->
+                    RecentAppsManager.registerAppOpen(requireContext(), app)
+                    AppLauncher.openApp(requireContext(), app.packageName, app.name)
+                },
+                onAllAppsClick = {
+                    openFragment(AllAppsFragment())
+                }
+            )
+
+            overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+            isNestedScrollingEnabled = false
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        root.addView(categoryRecycler)
     }
 
     private fun openFragment(fragment: Fragment) {

@@ -1,0 +1,27 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/expandedAppRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <ImageView
+        android:id="@+id/imgExpandedAppIcon"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:contentDescription="@null" />
+
+    <TextView
+        android:id="@+id/txtExpandedAppName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="#F4F7FB"
+        android:textSize="11sp" />
+
+</LinearLayout>

@@ -1,188 +1,107 @@
 package com.example.organizadorapps
 
 import android.graphics.Typeface
-import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 class CategoryFolderAdapter(
-    private val categories: List<AppCategory>,
-    private val onCategoryClick: (AppCategory) -> Unit
-) : RecyclerView.Adapter<CategoryFolderAdapter.FolderViewHolder>() {
+    private val categories: List<ExpandableCategoryItem>,
+    private val onCategoryClick: (ExpandableCategoryItem) -> Unit,
+    private val onAppClick: (InstalledApp) -> Unit,
+    private val onAllAppsClick: () -> Unit
+) : RecyclerView.Adapter<CategoryFolderAdapter.CategoryFolderViewHolder>() {
 
-    class FolderViewHolder(val layout: LinearLayout) : RecyclerView.ViewHolder(layout)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FolderViewHolder {
-        val context = parent.context
-
-        val card = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            isClickable = true
-            isFocusable = true
-            background = AppUiUtils.roundedCard()
-
-            setPadding(
-                AppUiUtils.dp(context, 14),
-                AppUiUtils.dp(context, 14),
-                AppUiUtils.dp(context, 14),
-                AppUiUtils.dp(context, 12)
-            )
-
-            layoutParams = RecyclerView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(context, 176)
-            ).apply {
-                setMargins(
-                    AppUiUtils.dp(context, 6),
-                    AppUiUtils.dp(context, 6),
-                    AppUiUtils.dp(context, 6),
-                    AppUiUtils.dp(context, 12)
-                )
-            }
-        }
-
-        return FolderViewHolder(card)
+    inner class CategoryFolderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val categoryRoot: LinearLayout = itemView.findViewById(R.id.categoryRoot)
+        val folderCard: LinearLayout = itemView.findViewById(R.id.folderCard)
+        val iconPreviewGrid: GridLayout = itemView.findViewById(R.id.iconPreviewGrid)
+        val txtCategoryName: TextView = itemView.findViewById(R.id.txtCategoryName)
+        val txtCategoryCount: TextView = itemView.findViewById(R.id.txtCategoryCount)
+        val txtExpandArrow: TextView = itemView.findViewById(R.id.txtExpandArrow)
+        val recyclerExpandedApps: RecyclerView = itemView.findViewById(R.id.recyclerExpandedApps)
     }
 
-    override fun onBindViewHolder(holder: FolderViewHolder, position: Int) {
-        val category = categories[position]
-        val context = holder.layout.context
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryFolderViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_expandable_category_folder, parent, false)
 
-        holder.layout.removeAllViews()
+        return CategoryFolderViewHolder(view)
+    }
 
-        holder.layout.setOnClickListener {
-            AnimationUtils.press(holder.layout) {
-                onCategoryClick(category)
+    override fun onBindViewHolder(holder: CategoryFolderViewHolder, position: Int) {
+        val item = categories[position]
+        val category = item.category
+        val context = holder.itemView.context
+        val apps = category.apps
+
+        holder.txtCategoryName.text = category.name
+        holder.txtCategoryCount.text = "${apps.size} apps"
+        holder.txtExpandArrow.text = if (item.isExpanded) "⌃" else "⌄"
+
+        holder.txtCategoryName.typeface = Typeface.DEFAULT_BOLD
+        holder.txtCategoryName.setTextColor(UiConstants.TEXT_PRIMARY)
+        holder.txtCategoryCount.setTextColor(UiConstants.TEXT_SECONDARY)
+
+        holder.iconPreviewGrid.removeAllViews()
+
+        apps.take(4).forEach { app ->
+            val iconSize = AppUiUtils.dp(context, 22)
+
+            val icon = ImageView(context).apply {
+                setImageDrawable(app.icon)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+
+                layoutParams = ViewGroup.MarginLayoutParams(
+                    iconSize,
+                    iconSize
+                ).apply {
+                    setMargins(
+                        AppUiUtils.dp(context, 2),
+                        AppUiUtils.dp(context, 2),
+                        AppUiUtils.dp(context, 2),
+                        AppUiUtils.dp(context, 2)
+                    )
+                }
+            }
+
+            holder.iconPreviewGrid.addView(icon)
+        }
+
+        holder.folderCard.setOnClickListener {
+            AnimationUtils.press(holder.folderCard) {
+                if (category.name == "Todas las apps") {
+                    onAllAppsClick()
+                } else {
+                    onCategoryClick(item)
+                }
             }
         }
 
-        val iconGrid = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            background = AppUiUtils.roundedCardAlt()
-
-            layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 86),
-                AppUiUtils.dp(context, 86)
-            )
-        }
-
-        val row1 = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-
-        val row2 = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-        }
-
-        if (category.name == "Todas las apps") {
-            repeat(2) {
-                row1.addView(dot(context))
+        holder.recyclerExpandedApps.visibility =
+            if (item.isExpanded && category.name != "Todas las apps") {
+                View.VISIBLE
+            } else {
+                View.GONE
             }
 
-            repeat(2) {
-                row2.addView(dot(context))
+        if (item.isExpanded && category.name != "Todas las apps") {
+            holder.recyclerExpandedApps.apply {
+                layoutManager = GridLayoutManager(context, 4)
+                adapter = ExpandedAppsAdapter(apps) { app ->
+                    onAppClick(app)
+                }
+                overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+                isNestedScrollingEnabled = false
             }
         } else {
-            val previewApps = category.apps.take(4)
-
-            repeat(4) { index ->
-                val iconView = ImageView(context).apply {
-                    if (index < previewApps.size) {
-                        setImageDrawable(previewApps[index].icon)
-                        alpha = 1f
-                    } else {
-                        alpha = 0.16f
-                    }
-
-                    layoutParams = LinearLayout.LayoutParams(
-                        AppUiUtils.dp(context, 30),
-                        AppUiUtils.dp(context, 30)
-                    ).apply {
-                        setMargins(
-                            AppUiUtils.dp(context, 3),
-                            AppUiUtils.dp(context, 3),
-                            AppUiUtils.dp(context, 3),
-                            AppUiUtils.dp(context, 3)
-                        )
-                    }
-                }
-
-                if (index < 2) {
-                    row1.addView(iconView)
-                } else {
-                    row2.addView(iconView)
-                }
-            }
-        }
-
-        iconGrid.addView(row1)
-        iconGrid.addView(row2)
-
-        holder.layout.addView(iconGrid)
-
-        holder.layout.addView(
-            TextView(context).apply {
-                text = category.name
-                textSize = 16f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(UiConstants.TEXT_PRIMARY)
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                maxLines = 1
-
-                setPadding(
-                    0,
-                    AppUiUtils.dp(context, 14),
-                    0,
-                    0
-                )
-            }
-        )
-
-        holder.layout.addView(
-            TextView(context).apply {
-                text = "${category.apps.size} apps"
-                textSize = 13f
-                setTextColor(UiConstants.TEXT_SECONDARY)
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                maxLines = 1
-
-                setPadding(
-                    0,
-                    AppUiUtils.dp(context, 6),
-                    0,
-                    0
-                )
-            }
-        )
-    }
-
-    private fun dot(context: android.content.Context): TextView {
-        return TextView(context).apply {
-            text = "●"
-            textSize = 18f
-            setTextColor(UiConstants.ACCENT)
-            gravity = Gravity.CENTER
-
-            layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 30),
-                AppUiUtils.dp(context, 30)
-            ).apply {
-                setMargins(
-                    AppUiUtils.dp(context, 3),
-                    AppUiUtils.dp(context, 3),
-                    AppUiUtils.dp(context, 3),
-                    AppUiUtils.dp(context, 3)
-                )
-            }
+            holder.recyclerExpandedApps.adapter = null
         }
     }
 
