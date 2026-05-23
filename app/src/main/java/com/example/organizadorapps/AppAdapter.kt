@@ -1,187 +1,343 @@
 package com.example.organizadorapps
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
     private val apps: List<InstalledApp>,
-    private val mode: Mode = Mode.GRID
+    private val mode: Mode = Mode.DEFAULT,
+    private val showAddFavorite: Boolean = false,
+    private val onAddFavoriteClick: (() -> Unit)? = null,
+    private val onLongPress: ((InstalledApp) -> Unit)? = null
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
     enum class Mode {
-        GRID,
+        DEFAULT,
         RECENT,
         FAVORITE
     }
 
-    class AppViewHolder(val layout: LinearLayout) : RecyclerView.ViewHolder(layout)
+    companion object {
+        private const val TYPE_APP = 0
+        private const val TYPE_ADD_FAVORITE = 1
+    }
+
+    inner class AppViewHolder(val container: LinearLayout) :
+        RecyclerView.ViewHolder(container)
+
+    override fun getItemViewType(position: Int): Int {
+        return if (
+            mode == Mode.FAVORITE &&
+            showAddFavorite &&
+            position == apps.size
+        ) {
+            TYPE_ADD_FAVORITE
+        } else {
+            TYPE_APP
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
         val context = parent.context
 
-        val card = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            isClickable = true
-            isFocusable = true
+        val root = when {
+            viewType == TYPE_ADD_FAVORITE -> {
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(
+                        AppUiUtils.dp(context, 10),
+                        AppUiUtils.dp(context, 10),
+                        AppUiUtils.dp(context, 10),
+                        AppUiUtils.dp(context, 10)
+                    )
 
-            // Solo GRID mantiene card. RECENT y FAVORITE quedan minimalistas.
-            background = if (mode == Mode.GRID) {
-                AppUiUtils.roundedCard()
-            } else {
-                null
+                    layoutParams = RecyclerView.LayoutParams(
+                        AppUiUtils.dp(context, 102),
+                        RecyclerView.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = AppUiUtils.dp(context, 14)
+                    }
+                }
             }
 
-            val width = when (mode) {
-                Mode.RECENT -> AppUiUtils.dp(context, 72)
-                Mode.FAVORITE -> AppUiUtils.dp(context, 72)
-                Mode.GRID -> AppUiUtils.dp(context, 148)
+            mode == Mode.RECENT -> {
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = AppUiUtils.roundedCard()
+                    setPadding(
+                        AppUiUtils.dp(context, 14),
+                        AppUiUtils.dp(context, 12),
+                        AppUiUtils.dp(context, 14),
+                        AppUiUtils.dp(context, 12)
+                    )
+
+                    layoutParams = RecyclerView.LayoutParams(
+                        AppUiUtils.dp(context, 190),
+                        AppUiUtils.dp(context, 76)
+                    ).apply {
+                        marginEnd = AppUiUtils.dp(context, 12)
+                    }
+                }
             }
 
-            val height = when (mode) {
-                Mode.RECENT -> LinearLayout.LayoutParams.WRAP_CONTENT
-                Mode.FAVORITE -> LinearLayout.LayoutParams.WRAP_CONTENT
-                Mode.GRID -> AppUiUtils.dp(context, 168)
+            mode == Mode.FAVORITE -> {
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(
+                        AppUiUtils.dp(context, 10),
+                        AppUiUtils.dp(context, 10),
+                        AppUiUtils.dp(context, 10),
+                        AppUiUtils.dp(context, 10)
+                    )
+
+                    layoutParams = RecyclerView.LayoutParams(
+                        AppUiUtils.dp(context, 102),
+                        RecyclerView.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = AppUiUtils.dp(context, 14)
+                    }
+                }
             }
 
-            setPadding(
-                AppUiUtils.dp(context, 3),
-                AppUiUtils.dp(context, 3),
-                AppUiUtils.dp(context, 3),
-                AppUiUtils.dp(context, 3)
-            )
+            else -> {
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    background = AppUiUtils.roundedCard()
+                    setPadding(
+                        AppUiUtils.dp(context, 12),
+                        AppUiUtils.dp(context, 14),
+                        AppUiUtils.dp(context, 12),
+                        AppUiUtils.dp(context, 14)
+                    )
 
-            layoutParams = ViewGroup.MarginLayoutParams(width, height).apply {
-                setMargins(
-                    AppUiUtils.dp(context, 4),
-                    AppUiUtils.dp(context, 4),
-                    AppUiUtils.dp(context, 16),
-                    AppUiUtils.dp(context, 4)
-                )
+                    layoutParams = RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        setMargins(0, 0, 0, AppUiUtils.dp(context, 12))
+                    }
+                }
             }
         }
 
-        return AppViewHolder(card)
+        return AppViewHolder(root)
     }
 
     override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
+        holder.container.removeAllViews()
+
+        if (getItemViewType(position) == TYPE_ADD_FAVORITE) {
+            bindAddFavorite(holder)
+            return
+        }
+
         val app = apps[position]
-        val context = holder.layout.context
-        val isFavorite = FavoritesManager.isFavorite(context, app.packageName)
-
-        holder.layout.removeAllViews()
-
-        holder.layout.background = when (mode) {
-            Mode.GRID -> {
-                if (isFavorite) AppUiUtils.favoriteCard() else AppUiUtils.roundedCard()
-            }
-
-            Mode.RECENT,
-            Mode.FAVORITE -> null
-        }
-
-        holder.layout.setOnClickListener {
-            RecentAppsManager.registerAppOpen(context, app)
-            AnimationUtils.press(holder.layout) {
-                AppLauncher.openApp(context, app.packageName, app.name)
-            }
-        }
-
-        holder.layout.setOnLongClickListener {
-            if (FavoritesManager.isFavorite(context, app.packageName)) {
-                FavoritesManager.removeFavorite(context, app.packageName)
-                Toast.makeText(context, "${app.name} quitada de favoritos", Toast.LENGTH_SHORT).show()
-            } else {
-                FavoritesManager.addFavorite(context, app.packageName)
-                Toast.makeText(context, "${app.name} agregada a favoritos", Toast.LENGTH_SHORT).show()
-            }
-
-            AnimationUtils.pop(holder.layout)
-            notifyItemChanged(position)
-            true
-        }
 
         when (mode) {
             Mode.RECENT -> bindRecent(holder, app)
             Mode.FAVORITE -> bindFavorite(holder, app)
-            Mode.GRID -> bindGrid(holder, app, isFavorite)
+            Mode.DEFAULT -> bindDefault(holder, app)
+        }
+
+        holder.container.setOnClickListener {
+            AnimationUtils.press(holder.container) {
+                val context = holder.container.context
+                val launchIntent =
+                    context.packageManager.getLaunchIntentForPackage(app.packageName)
+
+                launchIntent?.let {
+                    RecentAppsManager.registerAppOpen(context, app)
+                    context.startActivity(it)
+                }
+            }
+        }
+
+        holder.container.setOnLongClickListener {
+            onLongPress?.invoke(app)
+            true
         }
     }
 
     private fun bindRecent(holder: AppViewHolder, app: InstalledApp) {
-        val context = holder.layout.context
+        val context = holder.container.context
 
-        holder.layout.addView(ImageView(context).apply {
-            setImageDrawable(app.icon)
-            layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 50),
-                AppUiUtils.dp(context, 50)
-            )
-        })
-
-        holder.layout.addView(TextView(context).apply {
-            text = app.name
-            textSize = 11f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(UiConstants.TEXT_PRIMARY)
+        val iconContainer = LinearLayout(context).apply {
             gravity = Gravity.CENTER
-            includeFontPadding = false
-            maxLines = 1
-            setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
-        })
-    }
+            background = AppUiUtils.appIconTile(context)
 
-    private fun bindFavorite(holder: AppViewHolder, app: InstalledApp) {
-        val context = holder.layout.context
-
-        holder.layout.addView(ImageView(context).apply {
-            setImageDrawable(app.icon)
             layoutParams = LinearLayout.LayoutParams(
                 AppUiUtils.dp(context, 52),
                 AppUiUtils.dp(context, 52)
             )
-        })
+        }
 
-        holder.layout.addView(TextView(context).apply {
-            text = app.name
-            textSize = 11f
-            setTextColor(UiConstants.TEXT_PRIMARY)
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-            maxLines = 1
-            setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
-        })
-    }
+        iconContainer.addView(
+            ImageView(context).apply {
+                setImageDrawable(app.icon)
+                layoutParams = LinearLayout.LayoutParams(
+                    AppUiUtils.dp(context, 34),
+                    AppUiUtils.dp(context, 34)
+                )
+            }
+        )
 
-    private fun bindGrid(holder: AppViewHolder, app: InstalledApp, isFavorite: Boolean) {
-        val context = holder.layout.context
+        val textColumn = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(AppUiUtils.dp(context, 12), 0, 0, 0)
 
-        holder.layout.addView(ImageView(context).apply {
-            setImageDrawable(app.icon)
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 64),
-                AppUiUtils.dp(context, 64)
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
             )
-        })
+        }
 
-        holder.layout.addView(TextView(context).apply {
-            text = if (isFavorite) "★ ${app.name}" else app.name
-            textSize = 12f
-            typeface = if (isFavorite) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-            setTextColor(Color.parseColor("#E5E7EB"))
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-            setPadding(0, AppUiUtils.dp(context, 10), 0, 0)
-            maxLines = 2
-        })
+        textColumn.addView(
+            TextView(context).apply {
+                text = app.name
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                maxLines = 1
+                includeFontPadding = false
+            }
+        )
+
+        textColumn.addView(
+            TextView(context).apply {
+                text = RecentAppsManager.getRecentTimeLabel(context, app.packageName)
+                textSize = 12f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                maxLines = 1
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
+            }
+        )
+
+        holder.container.addView(iconContainer)
+        holder.container.addView(textColumn)
     }
 
-    override fun getItemCount(): Int = apps.size
+    private fun bindFavorite(holder: AppViewHolder, app: InstalledApp) {
+        val context = holder.container.context
+
+        val iconCard = LinearLayout(context).apply {
+            gravity = Gravity.CENTER
+            background = AppUiUtils.favoriteCard()
+
+            layoutParams = LinearLayout.LayoutParams(
+                AppUiUtils.dp(context, 78),
+                AppUiUtils.dp(context, 78)
+            )
+        }
+
+        iconCard.addView(
+            ImageView(context).apply {
+                setImageDrawable(app.icon)
+                layoutParams = LinearLayout.LayoutParams(
+                    AppUiUtils.dp(context, 46),
+                    AppUiUtils.dp(context, 46)
+                )
+            }
+        )
+
+        holder.container.addView(iconCard)
+
+        holder.container.addView(
+            TextView(context).apply {
+                text = app.name
+                textSize = 13f
+                gravity = Gravity.CENTER
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                maxLines = 1
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 10), 0, 0)
+            }
+        )
+    }
+
+    private fun bindAddFavorite(holder: AppViewHolder) {
+        val context = holder.container.context
+
+        val addCard = LinearLayout(context).apply {
+            gravity = Gravity.CENTER
+            background = AppUiUtils.addFavoriteCard(context)
+
+            layoutParams = LinearLayout.LayoutParams(
+                AppUiUtils.dp(context, 78),
+                AppUiUtils.dp(context, 78)
+            )
+        }
+
+        addCard.addView(
+            TextView(context).apply {
+                text = "+"
+                textSize = 34f
+                gravity = Gravity.CENTER
+                setTextColor(UiConstants.ACCENT)
+                includeFontPadding = false
+            }
+        )
+
+        holder.container.addView(addCard)
+
+        holder.container.addView(
+            TextView(context).apply {
+                text = "Agregar"
+                textSize = 13f
+                gravity = Gravity.CENTER
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 10), 0, 0)
+            }
+        )
+
+        holder.container.setOnClickListener {
+            AnimationUtils.press(holder.container) {
+                onAddFavoriteClick?.invoke()
+            }
+        }
+    }
+
+    private fun bindDefault(holder: AppViewHolder, app: InstalledApp) {
+        val context = holder.container.context
+
+        holder.container.addView(
+            ImageView(context).apply {
+                setImageDrawable(app.icon)
+
+                layoutParams = LinearLayout.LayoutParams(
+                    AppUiUtils.dp(context, 54),
+                    AppUiUtils.dp(context, 54)
+                ).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+            }
+        )
+
+        holder.container.addView(
+            TextView(context).apply {
+                text = app.name
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                maxLines = 2
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 12), 0, 0)
+            }
+        )
+    }
+
+    override fun getItemCount(): Int {
+        return apps.size + if (mode == Mode.FAVORITE && showAddFavorite) 1 else 0
+    }
 }

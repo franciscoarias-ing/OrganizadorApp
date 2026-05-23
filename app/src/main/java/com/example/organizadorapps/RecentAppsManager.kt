@@ -13,7 +13,7 @@ object RecentAppsManager {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
         val existing = getRecentAppsRaw(context)
-            .filterNot { it.getString("packageName") == app.packageName }
+            .filterNot { it.optString("packageName") == app.packageName }
             .toMutableList()
 
         val newItem = JSONObject().apply {
@@ -24,25 +24,38 @@ object RecentAppsManager {
 
         existing.add(0, newItem)
 
-        val trimmed = existing.take(20)
-
         val array = JSONArray()
-        trimmed.forEach { array.put(it) }
+        existing.take(20).forEach { array.put(it) }
 
         prefs.edit().putString(KEY, array.toString()).apply()
     }
 
     fun getRecentPackageNames(context: Context): List<String> {
         return getRecentAppsRaw(context).map {
-            it.getString("packageName")
+            it.optString("packageName")
+        }
+    }
+
+    fun getRecentTimeLabel(context: Context, packageName: String): String {
+        val item = getRecentAppsRaw(context)
+            .firstOrNull { it.optString("packageName") == packageName }
+            ?: return "Reciente"
+
+        val timestamp = item.optLong("timestamp", 0L)
+        if (timestamp <= 0L) return "Reciente"
+
+        val diffMinutes = ((System.currentTimeMillis() - timestamp) / 60000).coerceAtLeast(1)
+
+        return when {
+            diffMinutes < 60 -> "Hace ${diffMinutes} min"
+            diffMinutes < 1440 -> "Hace ${diffMinutes / 60} h"
+            else -> "Hace ${diffMinutes / 1440} d"
         }
     }
 
     private fun getRecentAppsRaw(context: Context): List<JSONObject> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
         val raw = prefs.getString(KEY, "[]") ?: "[]"
-
         val jsonArray = JSONArray(raw)
 
         return List(jsonArray.length()) {

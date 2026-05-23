@@ -30,7 +30,6 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
         allApps = AppRepository.getInstalledLaunchableApps(requireContext())
 
         val favoritePackages = FavoritesManager.getFavoritePackages(requireContext())
@@ -56,17 +55,16 @@ class HomeFragment : Fragment() {
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-
-            // Espaciado superior corregido para que no quede pegado a la status bar.
             setPadding(
                 AppUiUtils.dp(requireContext(), 22),
-                AppUiUtils.dp(requireContext(), 42),
+                AppUiUtils.dp(requireContext(), 34),
                 AppUiUtils.dp(requireContext(), 22),
-                AppUiUtils.dp(requireContext(), 24)
+                AppUiUtils.dp(requireContext(), 26)
             )
         }
 
-        root.addView(AppUiUtils.title(requireContext(), "Apps"))
+        root.addView(AppUiUtils.title(requireContext(), "Inicio Inteligente"))
+
         root.addView(
             AppUiUtils.searchButton(
                 context = requireContext(),
@@ -92,25 +90,24 @@ class HomeFragment : Fragment() {
             gravity = android.view.Gravity.CENTER
             background = AppUiUtils.glassCard()
 
-            // Altura y padding corregidos: antes se cortaban los textos.
             setPadding(
-                AppUiUtils.dp(requireContext(), 12),
+                AppUiUtils.dp(requireContext(), 10),
                 AppUiUtils.dp(requireContext(), 14),
-                AppUiUtils.dp(requireContext(), 12),
+                AppUiUtils.dp(requireContext(), 10),
                 AppUiUtils.dp(requireContext(), 14)
             )
+
+            minimumHeight = AppUiUtils.dp(requireContext(), 112)
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, 0, 0, AppUiUtils.dp(requireContext(), 20))
+                setMargins(0, 0, 0, AppUiUtils.dp(requireContext(), 18))
             }
 
-            minimumHeight = AppUiUtils.dp(requireContext(), 132)
-            minimumHeight = AppUiUtils.dp(requireContext(), 118)
             addView(
-                AppUiUtils.quickAction(requireContext(), "⌘", "Todas las apps") {
+                AppUiUtils.quickAction(requireContext(), "⌘", "Todas las\napps") {
                     openFragment(AllAppsFragment())
                 }
             )
@@ -118,7 +115,7 @@ class HomeFragment : Fragment() {
             addView(AppUiUtils.verticalDivider(requireContext()))
 
             addView(
-                AppUiUtils.quickAction(requireContext(), "☆", "Añadir favorito") {
+                AppUiUtils.quickAction(requireContext(), "☆", "Añadir\nfavorito") {
                     Toast.makeText(
                         requireContext(),
                         "Mantén presionada una app para agregarla a favoritos",
@@ -130,7 +127,7 @@ class HomeFragment : Fragment() {
             addView(AppUiUtils.verticalDivider(requireContext()))
 
             addView(
-                AppUiUtils.quickAction(requireContext(), "▣", "Escanear apps") {
+                AppUiUtils.quickAction(requireContext(), "▣", "Escanear\napps") {
                     Toast.makeText(
                         requireContext(),
                         "Tus apps ya fueron detectadas automáticamente",
@@ -158,7 +155,7 @@ class HomeFragment : Fragment() {
         apps: List<com.example.organizadorapps.InstalledApp>
     ) {
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Recientes", "Ver todos") {
+            AppUiUtils.sectionRow(requireContext(), "Recientes", "Ver todos", 18, 12) {
                 openFragment(AllAppsFragment())
             }
         )
@@ -177,10 +174,11 @@ class HomeFragment : Fragment() {
                 )
                 adapter = AppAdapter(apps.take(10), AppAdapter.Mode.RECENT)
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+                isNestedScrollingEnabled = false
 
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+                    AppUiUtils.dp(requireContext(), 78)
                 )
             }
         )
@@ -191,15 +189,10 @@ class HomeFragment : Fragment() {
         apps: List<com.example.organizadorapps.InstalledApp>
     ) {
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Favoritos rápidos", "Ver todos") {
+            AppUiUtils.sectionRow(requireContext(), "Favoritos rápidos", "Ver todos", 22, 12) {
                 openFragment(FavoritesFragment())
             }
         )
-
-        if (apps.isEmpty()) {
-            root.addView(AppUiUtils.miniEmpty(requireContext(), "Mantén presionada una app para agregarla."))
-            return
-        }
 
         root.addView(
             RecyclerView(requireContext()).apply {
@@ -208,12 +201,26 @@ class HomeFragment : Fragment() {
                     LinearLayoutManager.HORIZONTAL,
                     false
                 )
-                adapter = AppAdapter(apps.take(10), AppAdapter.Mode.FAVORITE)
+
+                adapter = AppAdapter(
+                    apps = apps.take(8),
+                    mode = AppAdapter.Mode.FAVORITE,
+                    showAddFavorite = true,
+                    onAddFavoriteClick = {
+                        Toast.makeText(
+                            requireContext(),
+                            "Mantén presionada una app para agregarla a favoritos",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+                isNestedScrollingEnabled = false
 
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    AppUiUtils.dp(requireContext(), 116)
+                    AppUiUtils.dp(requireContext(), 118)
                 )
             }
         )
@@ -224,18 +231,14 @@ class HomeFragment : Fragment() {
         categories: List<AppCategory>
     ) {
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar") {
+            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 24, 12) {
                 Toast.makeText(requireContext(), "Edición de categorías próximamente", Toast.LENGTH_SHORT).show()
             }
         )
 
         root.addView(
             RecyclerView(requireContext()).apply {
-                layoutManager = LinearLayoutManager(
-                    requireContext(),
-                    LinearLayoutManager.HORIZONTAL,
-                    false
-                )
+                layoutManager = GridLayoutManager(requireContext(), 2)
 
                 adapter = CategoryFolderAdapter(categories) { category ->
                     if (category.name == "Todas las apps") {
@@ -250,7 +253,7 @@ class HomeFragment : Fragment() {
 
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    AppUiUtils.dp(requireContext(), 118)
+                    LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             }
         )

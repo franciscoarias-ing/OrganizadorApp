@@ -89,7 +89,7 @@ class AllAppsFragment : Fragment() {
 
             adapter = AppAdapter(
                 filteredApps,
-                AppAdapter.Mode.GRID
+                AppAdapter.Mode.DEFAULT
             ).also {
                 this@AllAppsFragment.adapter = it
             }

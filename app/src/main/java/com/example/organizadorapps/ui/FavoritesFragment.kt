@@ -95,7 +95,7 @@ class FavoritesFragment : Fragment() {
 
                 adapter = AppAdapter(
                     filteredApps,
-                    AppAdapter.Mode.GRID
+                    AppAdapter.Mode.DEFAULT
                 ).also {
                     this@FavoritesFragment.adapter = it
                 }

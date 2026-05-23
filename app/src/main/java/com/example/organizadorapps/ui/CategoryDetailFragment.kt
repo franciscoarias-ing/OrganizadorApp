@@ -80,7 +80,7 @@ class CategoryDetailFragment(
 
             adapter = AppAdapter(
                 filteredApps,
-                AppAdapter.Mode.GRID
+                AppAdapter.Mode.DEFAULT
             ).also {
                 this@CategoryDetailFragment.adapter = it
             }

@@ -1,9 +1,12 @@
 package com.example.organizadorapps
-import android.text.Editable
-import android.text.TextWatcher
+
 import android.content.Context
+import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -15,6 +18,194 @@ object AppUiUtils {
     fun dp(context: Context, value: Int): Int {
         return (value * context.resources.displayMetrics.density).toInt()
     }
+
+    fun title(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 32f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(UiConstants.TEXT_PRIMARY)
+            includeFontPadding = false
+            setPadding(0, dp(context, 6), 0, dp(context, 12))
+        }
+    }
+
+    fun smallGreeting(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 16f
+            setTextColor(UiConstants.TEXT_PRIMARY)
+            includeFontPadding = false
+        }
+    }
+
+    fun subtitleColor(): Int {
+        return UiConstants.TEXT_SECONDARY
+    }
+
+    fun subtitle(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 16f
+            setTextColor(UiConstants.TEXT_SECONDARY)
+            includeFontPadding = false
+            setPadding(0, dp(context, 10), 0, dp(context, 22))
+        }
+    }
+
+    fun kicker(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 14f
+            setTextColor(UiConstants.ACCENT)
+            includeFontPadding = false
+            setPadding(0, dp(context, 6), 0, dp(context, 8))
+        }
+    }
+
+    fun searchButton(
+        context: Context,
+        hint: String,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(context, 20), 0, dp(context, 20), 0)
+            background = glassCard()
+            isClickable = true
+            isFocusable = true
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(context, 58)
+            ).apply {
+                setMargins(0, 0, 0, dp(context, 20))
+            }
+
+            setOnClickListener {
+                AnimationUtils.press(this) { onClick() }
+            }
+
+            addView(TextView(context).apply {
+                text = "⌕"
+                textSize = 31f
+                setTextColor(UiConstants.ACCENT)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(context, 44),
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            })
+
+            addView(TextView(context).apply {
+                text = hint
+                textSize = 17f
+                setTextColor(UiConstants.TEXT_MUTED)
+                includeFontPadding = false
+            })
+        }
+    }
+
+    fun searchBox(
+        context: Context,
+        hintValue: String,
+        onTextChanged: (String) -> Unit
+    ): EditText {
+        return EditText(context).apply {
+            hint = hintValue
+            textSize = 16f
+            setTextColor(UiConstants.TEXT_PRIMARY)
+            setHintTextColor(UiConstants.TEXT_MUTED)
+            isSingleLine = true
+            background = glassCard()
+            setPadding(dp(context, 20), 0, dp(context, 20), 0)
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(context, 58)
+            ).apply {
+                setMargins(0, 0, 0, dp(context, 18))
+            }
+
+            addTextChangedListenerCompat {
+                onTextChanged(it)
+            }
+        }
+    }
+
+    fun EditText.addTextChangedListenerCompat(onChanged: (String) -> Unit) {
+        this.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {
+            }
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) {
+                onChanged(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
+    fun quickAction(
+        context: Context,
+        icon: String,
+        label: String,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            isFocusable = true
+
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+
+            setOnClickListener {
+                AnimationUtils.press(this) { onClick() }
+            }
+
+            addView(TextView(context).apply {
+                text = icon
+                textSize = 25f
+                setTextColor(UiConstants.ACCENT)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                background = circleAccentSoft(context)
+
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(context, 54),
+                    dp(context, 54)
+                )
+            })
+
+            addView(TextView(context).apply {
+                text = label
+                textSize = 12f
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                maxLines = 2
+                setPadding(0, dp(context, 10), 0, 0)
+            })
+        }
+    }
+
     fun actionCard(
         context: Context,
         title: String,
@@ -52,6 +243,7 @@ object AppUiUtils {
                 textSize = 28f
                 setTextColor(UiConstants.ACCENT)
                 gravity = Gravity.CENTER
+                background = circleAccentSoft(context)
                 layoutParams = LinearLayout.LayoutParams(
                     dp(context, 52),
                     dp(context, 52)
@@ -65,7 +257,7 @@ object AppUiUtils {
                 addView(TextView(context).apply {
                     text = title
                     textSize = 16f
-                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    typeface = Typeface.DEFAULT_BOLD
                     setTextColor(UiConstants.TEXT_PRIMARY)
                     includeFontPadding = false
                 })
@@ -77,203 +269,6 @@ object AppUiUtils {
                     includeFontPadding = false
                     setPadding(0, dp(context, 6), 0, 0)
                 })
-            })
-        }
-    }
-    fun title(context: Context, textValue: String): TextView {
-        return TextView(context).apply {
-            text = textValue
-            textSize = 34f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(UiConstants.TEXT_PRIMARY)
-            includeFontPadding = false
-            setPadding(0, dp(context, 8), 0, 0)
-        }
-    }
-
-    fun smallGreeting(context: Context, textValue: String): TextView {
-        return TextView(context).apply {
-            text = textValue
-            textSize = 16f
-            setTextColor(UiConstants.TEXT_PRIMARY)
-            includeFontPadding = false
-        }
-    }
-    fun subtitleColor(): Int {
-        return UiConstants.TEXT_SECONDARY
-    }
-    fun subtitle(context: Context, textValue: String): TextView {
-        return TextView(context).apply {
-            text = textValue
-            textSize = 16f
-            setTextColor(UiConstants.TEXT_SECONDARY)
-            includeFontPadding = false
-            setPadding(0, dp(context, 12), 0, dp(context, 24))
-        }
-    }
-    fun kicker(context: Context, textValue: String): TextView {
-        return TextView(context).apply {
-            text = textValue
-            textSize = 14f
-            setTextColor(UiConstants.ACCENT)
-            includeFontPadding = false
-            setPadding(0, dp(context, 6), 0, dp(context, 8))
-        }
-    }
-
-    fun searchBox(
-        context: Context,
-        hintValue: String,
-        onTextChanged: (String) -> Unit
-    ): EditText {
-        return EditText(context).apply {
-            hint = hintValue
-            textSize = 16f
-            setTextColor(UiConstants.TEXT_PRIMARY)
-            setHintTextColor(UiConstants.TEXT_MUTED)
-            isSingleLine = true
-            background = glassCard()
-            setPadding(
-                dp(context, 20),
-                0,
-                dp(context, 20),
-                0
-            )
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(context, 58)
-            ).apply {
-                setMargins(0, 0, 0, dp(context, 18))
-            }
-
-            addTextChangedListenerCompat {
-                onTextChanged(it)
-            }
-        }
-    }
-
-    fun EditText.addTextChangedListenerCompat(onChanged: (String) -> Unit) {
-        this.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                onChanged(s?.toString().orEmpty())
-            }
-
-            override fun afterTextChanged(s: Editable?) {}
-        })
-    }
-
-    fun glassCard(): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(UiConstants.SURFACE)
-            cornerRadius = 32f
-            setStroke(1, UiConstants.BORDER)
-        }
-    }
-
-    fun roundedCard(): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(UiConstants.SURFACE)
-            cornerRadius = 28f
-            setStroke(1, UiConstants.BORDER)
-        }
-    }
-
-    fun favoriteCard(): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(UiConstants.SURFACE_ALT)
-            cornerRadius = 28f
-            setStroke(2, UiConstants.GOLD)
-        }
-    }
-
-
-
-    fun searchButton(
-        context: Context,
-        hint: String,
-        onClick: () -> Unit
-    ): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(context, 22), 0, dp(context, 22), 0)
-            background = glassCard()
-            isClickable = true
-            isFocusable = true
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(context, 64)
-            ).apply {
-                setMargins(0, 0, 0, dp(context, 18))
-            }
-
-            setOnClickListener {
-                AnimationUtils.press(this) { onClick() }
-            }
-
-            addView(TextView(context).apply {
-                text = "⌕"
-                textSize = 32f
-                setTextColor(UiConstants.ACCENT)
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(dp(context, 48), LinearLayout.LayoutParams.WRAP_CONTENT)
-            })
-
-            addView(TextView(context).apply {
-                text = hint
-                textSize = 18f
-                setTextColor(UiConstants.TEXT_MUTED)
-                includeFontPadding = false
-            })
-        }
-    }
-
-    fun quickAction(
-        context: Context,
-        icon: String,
-        label: String,
-        onClick: () -> Unit
-    ): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            isClickable = true
-            isFocusable = true
-
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-
-            setOnClickListener {
-                AnimationUtils.press(this) { onClick() }
-            }
-
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 25f
-                setTextColor(UiConstants.ACCENT)
-                gravity = Gravity.CENTER
-                background = GradientDrawable().apply {
-                    setColor(UiConstants.ACCENT_SOFT)
-                    cornerRadius = dp(context, 24).toFloat()
-                }
-                layoutParams = LinearLayout.LayoutParams(dp(context, 52), dp(context, 52))
-            })
-
-            addView(TextView(context).apply {
-                text = label
-                textSize = 12f
-                setTextColor(UiConstants.TEXT_PRIMARY)
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                maxLines = 2
-                setPadding(0, dp(context, 10), 0, 0)
             })
         }
     }
@@ -299,11 +294,15 @@ object AppUiUtils {
 
             addView(TextView(context).apply {
                 text = title
-                textSize = 21f
+                textSize = 22f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(UiConstants.TEXT_PRIMARY)
                 includeFontPadding = false
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
             })
 
             addView(TextView(context).apply {
@@ -326,13 +325,75 @@ object AppUiUtils {
         }
     }
 
-
     fun verticalDivider(context: Context): View {
         return View(context).apply {
             setBackgroundColor(UiConstants.BORDER)
-            layoutParams = LinearLayout.LayoutParams(dp(context, 1), dp(context, 56)).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                dp(context, 1),
+                dp(context, 58)
+            ).apply {
                 setMargins(dp(context, 8), 0, dp(context, 8), 0)
             }
+        }
+    }
+
+    fun glassCard(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE)
+            cornerRadius = 30f
+            setStroke(1, UiConstants.BORDER)
+        }
+    }
+
+    fun roundedCard(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE)
+            cornerRadius = 32f
+            setStroke(1, UiConstants.BORDER)
+        }
+    }
+
+    fun roundedCardAlt(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE_ALT)
+            cornerRadius = 28f
+            setStroke(1, UiConstants.BORDER)
+        }
+    }
+
+    fun favoriteCard(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE_ALT)
+            cornerRadius = 28f
+            setStroke(1, UiConstants.BORDER)
+        }
+    }
+
+    fun appIconTile(context: Context): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE_ALT)
+            cornerRadius = dp(context, 18).toFloat()
+            setStroke(1, UiConstants.BORDER)
+        }
+    }
+
+    fun addFavoriteCard(context: Context): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(Color.TRANSPARENT)
+            cornerRadius = dp(context, 18).toFloat()
+            setStroke(
+                dp(context, 1),
+                UiConstants.ACCENT,
+                dp(context, 8).toFloat(),
+                dp(context, 6).toFloat()
+            )
+        }
+    }
+
+    fun circleAccentSoft(context: Context): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(UiConstants.ACCENT_SOFT)
         }
     }
 }
