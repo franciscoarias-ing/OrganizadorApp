@@ -23,12 +23,12 @@ class AppAdapter(
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(16, 16, 16, 16)
+            setPadding(14, 14, 14, 14)
             background = cardBackground(false)
             isClickable = true
             isFocusable = true
 
-            layoutParams = ViewGroup.MarginLayoutParams(210, 240).apply {
+            layoutParams = ViewGroup.MarginLayoutParams(178, 215).apply {
                 setMargins(8, 8, 8, 8)
             }
         }
@@ -45,7 +45,20 @@ class AppAdapter(
         holder.layout.background = cardBackground(isFavorite)
 
         holder.layout.setOnClickListener {
-            AppLauncher.openApp(context, app.packageName, app.name)
+            holder.layout.animate()
+                .scaleX(0.96f)
+                .scaleY(0.96f)
+                .setDuration(70)
+                .withEndAction {
+                    holder.layout.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(70)
+                        .start()
+
+                    AppLauncher.openApp(context, app.packageName, app.name)
+                }
+                .start()
         }
 
         holder.layout.setOnLongClickListener {
@@ -57,22 +70,35 @@ class AppAdapter(
                 Toast.makeText(context, "${app.name} agregada a favoritos", Toast.LENGTH_SHORT).show()
             }
 
+            holder.layout.animate()
+                .scaleX(1.05f)
+                .scaleY(1.05f)
+                .setDuration(90)
+                .withEndAction {
+                    holder.layout.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(90)
+                        .start()
+                }
+                .start()
+
             notifyItemChanged(position)
             true
         }
 
         holder.layout.addView(ImageView(context).apply {
             setImageDrawable(app.icon)
-            layoutParams = LinearLayout.LayoutParams(88, 88)
+            layoutParams = LinearLayout.LayoutParams(76, 76)
         })
 
         holder.layout.addView(TextView(context).apply {
             text = if (isFavorite) "★ ${app.name}" else app.name
-            textSize = 12f
+            textSize = 11f
             typeface = if (isFavorite) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
             setTextColor(Color.parseColor("#E5E7EB"))
             gravity = Gravity.CENTER
-            setPadding(0, 14, 0, 0)
+            setPadding(0, 12, 0, 0)
             maxLines = 2
         })
     }
@@ -82,7 +108,7 @@ class AppAdapter(
     private fun cardBackground(isFavorite: Boolean): GradientDrawable {
         return GradientDrawable().apply {
             setColor(Color.parseColor(if (isFavorite) "#252D3D" else "#1A1F2B"))
-            cornerRadius = 28f
+            cornerRadius = 26f
             setStroke(
                 if (isFavorite) 2 else 1,
                 Color.parseColor(if (isFavorite) "#D6A84F" else "#2B3140")

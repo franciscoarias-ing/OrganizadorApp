@@ -30,7 +30,6 @@ class CategoriesFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
         allApps = AppRepository.getInstalledLaunchableApps(requireContext())
 
         rootLayout = LinearLayout(requireContext()).apply {
@@ -46,24 +45,27 @@ class CategoriesFragment : Fragment() {
         })
 
         rootLayout.addView(TextView(requireContext()).apply {
-            text = "${allApps.size} apps detectadas"
+            text = "Apps organizadas automáticamente"
             textSize = 14f
             setTextColor(Color.parseColor("#8F96A3"))
             setPadding(0, 8, 0, 24)
         })
 
         rootLayout.addView(searchBox())
+
         recyclerView = RecyclerView(requireContext()).apply {
             layoutManager = LinearLayoutManager(requireContext())
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-            layoutParams = LinearLayout.LayoutParams(
+        }
+
+        rootLayout.addView(
+            recyclerView,
+            LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
                 1f
             )
-        }
-
-        rootLayout.addView(recyclerView)
+        )
 
         renderCategories(allApps)
 
@@ -71,17 +73,12 @@ class CategoriesFragment : Fragment() {
     }
 
     private fun searchBox(): EditText {
-
         return EditText(requireContext()).apply {
-
-            hint = "Buscar apps..."
+            hint = "Buscar por nombre o paquete..."
             textSize = 15f
-
             setHintTextColor(Color.parseColor("#777E8C"))
             setTextColor(Color.WHITE)
-
             setSingleLine(true)
-
             setPadding(28, 0, 28, 0)
 
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -98,7 +95,6 @@ class CategoriesFragment : Fragment() {
             }
 
             addTextChangedListener(object : TextWatcher {
-
                 override fun beforeTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -112,7 +108,6 @@ class CategoriesFragment : Fragment() {
                     before: Int,
                     count: Int
                 ) {
-
                     val query = s.toString().trim().lowercase()
 
                     val filteredApps = if (query.isEmpty()) {
@@ -133,7 +128,6 @@ class CategoriesFragment : Fragment() {
     }
 
     private fun renderCategories(apps: List<InstalledApp>) {
-
         val categories = buildCategories(apps)
 
         recyclerView.adapter = CategoryAdapter(
@@ -142,26 +136,14 @@ class CategoriesFragment : Fragment() {
     }
 
     private fun buildCategories(apps: List<InstalledApp>): List<AppCategory> {
-
-        val dynamicCategories = CategoryRules.rules.map { rule ->
-
+        return CategoryRules.rules.map { rule ->
             AppCategory(
                 rule.key,
-
                 apps.filter { app ->
-
-                    val searchable =
-                        "${app.name} ${app.packageName}".lowercase()
-
-                    rule.value.any { keyword ->
-                        searchable.contains(keyword)
-                    }
+                    val searchable = "${app.name} ${app.packageName}".lowercase()
+                    rule.value.any { keyword -> searchable.contains(keyword) }
                 }
             )
         }
-
-        return dynamicCategories
     }
-
-
 }
