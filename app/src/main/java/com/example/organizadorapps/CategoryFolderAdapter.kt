@@ -12,33 +12,33 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 class CategoryFolderAdapter(
-    private val items: List<CategoryGridItem>,
+    initialItems: List<CategoryGridItem>,
     private val onFolderClick: (ExpandableCategoryItem) -> Unit,
     private val onCollapseClick: () -> Unit,
     private val onAppClick: (InstalledApp) -> Unit,
     private val onAllAppsClick: () -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
+    private val items = mutableListOf<CategoryGridItem>()
+
     companion object {
         const val VIEW_TYPE_FOLDER = 1
         const val VIEW_TYPE_EXPANDED_PANEL = 2
     }
 
-    class FolderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val categoryRoot: LinearLayout = itemView.findViewById(R.id.categoryRoot)
-        val folderCard: LinearLayout = itemView.findViewById(R.id.folderCard)
-        val iconPreviewGrid: GridLayout = itemView.findViewById(R.id.iconPreviewGrid)
-        val txtCategoryName: TextView = itemView.findViewById(R.id.txtCategoryName)
-        val txtCategoryCount: TextView = itemView.findViewById(R.id.txtCategoryCount)
+    init {
+        items.addAll(initialItems)
+        setHasStableIds(false)
     }
 
-    class ExpandedPanelViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val expandedPanelRoot: LinearLayout = itemView.findViewById(R.id.expandedPanelRoot)
-        val expandedPreviewGrid: GridLayout = itemView.findViewById(R.id.expandedPreviewGrid)
-        val txtExpandedCategoryName: TextView = itemView.findViewById(R.id.txtExpandedCategoryName)
-        val txtExpandedCategoryCount: TextView = itemView.findViewById(R.id.txtExpandedCategoryCount)
-        val btnCollapseCategory: TextView = itemView.findViewById(R.id.btnCollapseCategory)
-        val recyclerPanelApps: RecyclerView = itemView.findViewById(R.id.recyclerPanelApps)
+    fun updateItems(newItems: List<CategoryGridItem>) {
+        items.clear()
+        items.addAll(newItems)
+        notifyDataSetChanged()
+    }
+
+    fun getItemAt(position: Int): CategoryGridItem? {
+        return items.getOrNull(position)
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -126,7 +126,7 @@ class CategoryFolderAdapter(
             holder.iconPreviewGrid.addView(icon)
         }
 
-        holder.folderCard.alpha = if (item.isExpanded) 0.88f else 1f
+        holder.folderCard.alpha = if (item.isExpanded) 0.92f else 1f
 
         holder.folderCard.setOnClickListener {
             AnimationUtils.press(holder.folderCard) {
@@ -182,10 +182,6 @@ class CategoryFolderAdapter(
             }
         }
 
-        holder.expandedPanelRoot.setOnClickListener {
-            // Evita que el panel capture clicks accidentales sin acción.
-        }
-
         holder.recyclerPanelApps.apply {
             layoutManager = GridLayoutManager(context, 4)
             adapter = ExpandedAppsAdapter(apps) { app ->
@@ -194,7 +190,33 @@ class CategoryFolderAdapter(
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
             isNestedScrollingEnabled = false
         }
+
+        holder.expandedPanelRoot.alpha = 0f
+        holder.expandedPanelRoot.translationY = -AppUiUtils.dp(context, 14).toFloat()
+
+        holder.expandedPanelRoot.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(220)
+            .start()
     }
 
     override fun getItemCount(): Int = items.size
+
+    class FolderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val categoryRoot: LinearLayout = itemView.findViewById(R.id.categoryRoot)
+        val folderCard: LinearLayout = itemView.findViewById(R.id.folderCard)
+        val iconPreviewGrid: GridLayout = itemView.findViewById(R.id.iconPreviewGrid)
+        val txtCategoryName: TextView = itemView.findViewById(R.id.txtCategoryName)
+        val txtCategoryCount: TextView = itemView.findViewById(R.id.txtCategoryCount)
+    }
+
+    class ExpandedPanelViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val expandedPanelRoot: LinearLayout = itemView.findViewById(R.id.expandedPanelRoot)
+        val expandedPreviewGrid: GridLayout = itemView.findViewById(R.id.expandedPreviewGrid)
+        val txtExpandedCategoryName: TextView = itemView.findViewById(R.id.txtExpandedCategoryName)
+        val txtExpandedCategoryCount: TextView = itemView.findViewById(R.id.txtExpandedCategoryCount)
+        val btnCollapseCategory: TextView = itemView.findViewById(R.id.btnCollapseCategory)
+        val recyclerPanelApps: RecyclerView = itemView.findViewById(R.id.recyclerPanelApps)
+    }
 }

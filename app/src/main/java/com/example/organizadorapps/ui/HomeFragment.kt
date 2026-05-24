@@ -1,4 +1,16 @@
 package com.example.organizadorapps.ui
+
+import com.example.organizadorapps.AnimationUtils
+import com.example.organizadorapps.ExpandedAppsAdapter
+
+
+
+import android.widget.GridLayout
+import android.widget.ImageView
+import android.widget.TextView
+import android.transition.AutoTransition
+import android.transition.TransitionManager
+import androidx.recyclerview.widget.DefaultItemAnimator
 import com.example.organizadorapps.CategoryGridItem
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -268,15 +280,8 @@ class HomeFragment : Fragment() {
         root: LinearLayout,
         categories: MutableList<ExpandableCategoryItem>
     ) {
-
         root.addView(
-            AppUiUtils.sectionRow(
-                requireContext(),
-                "Mis categorías",
-                "Editar",
-                24,
-                12
-            ) {
+            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 24, 12) {
                 Toast.makeText(
                     requireContext(),
                     "Edición de categorías próximamente",
@@ -285,139 +290,262 @@ class HomeFragment : Fragment() {
             }
         )
 
-        val categoryRecycler = RecyclerView(requireContext())
-
-        fun buildGridItems(): MutableList<CategoryGridItem> {
-
-            val result = mutableListOf<CategoryGridItem>()
-
-            categories.forEach { category ->
-
-                result.add(
-                    CategoryGridItem.Folder(category)
-                )
-
-                if (category.isExpanded) {
-                    result.add(
-                        CategoryGridItem.ExpandedPanel(category)
-                    )
-                }
-            }
-
-            return result
-        }
-
-        var gridItems = buildGridItems()
-
-        val gridLayoutManager = GridLayoutManager(requireContext(), 4)
-
-        gridLayoutManager.spanSizeLookup =
-            object : GridLayoutManager.SpanSizeLookup() {
-
-                override fun getSpanSize(position: Int): Int {
-
-                    return when (gridItems[position]) {
-
-                        is CategoryGridItem.ExpandedPanel -> 4
-
-                        else -> 1
-                    }
-                }
-            }
-
-        lateinit var adapter: CategoryFolderAdapter
-
-        adapter = CategoryFolderAdapter(
-            items = gridItems,
-
-            onFolderClick = { clickedItem ->
-
-                categories.forEach { category ->
-                    category.isExpanded = false
-                }
-
-                clickedItem.isExpanded = true
-
-                gridItems = buildGridItems()
-
-                categoryRecycler.post {
-                    categoryRecycler.adapter =
-                        CategoryFolderAdapter(
-                            items = gridItems,
-
-                            onFolderClick = adapter.onFolderClick,
-
-                            onCollapseClick = adapter.onCollapseClick,
-
-                            onAppClick = adapter.onAppClick,
-
-                            onAllAppsClick = adapter.onAllAppsClick
-                        )
-                }
-            },
-
-            onCollapseClick = {
-
-                categories.forEach {
-                    it.isExpanded = false
-                }
-
-                gridItems = buildGridItems()
-
-                categoryRecycler.post {
-                    categoryRecycler.adapter =
-                        CategoryFolderAdapter(
-                            items = gridItems,
-
-                            onFolderClick = adapter.onFolderClick,
-
-                            onCollapseClick = adapter.onCollapseClick,
-
-                            onAppClick = adapter.onAppClick,
-
-                            onAllAppsClick = adapter.onAllAppsClick
-                        )
-                }
-            },
-
-            onAppClick = { app ->
-
-                RecentAppsManager.registerAppOpen(
-                    requireContext(),
-                    app
-                )
-
-                AppLauncher.openApp(
-                    requireContext(),
-                    app.packageName,
-                    app.name
-                )
-            },
-
-            onAllAppsClick = {
-                openFragment(AllAppsFragment())
-            }
-        )
-
-        categoryRecycler.apply {
-
-            layoutManager = gridLayoutManager
-
-            this.adapter = adapter
-
-            overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-
-            isNestedScrollingEnabled = false
-
+        val categoriesContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        root.addView(categoryRecycler)
-    }
+        val rowViews = mutableListOf<LinearLayout>()
+        val folderViews = mutableMapOf<ExpandableCategoryItem, LinearLayout>()
+        var expandedPanel: View? = null
+        var expandedItem: ExpandableCategoryItem? = null
 
+        fun fillPreviewIcons(grid: GridLayout, apps: List<InstalledApp>, iconSizeDp: Int) {
+            grid.removeAllViews()
+
+            apps.take(4).forEach { app ->
+                val icon = ImageView(requireContext()).apply {
+                    setImageDrawable(app.icon)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    layoutParams = ViewGroup.MarginLayoutParams(
+                        AppUiUtils.dp(requireContext(), iconSizeDp),
+                        AppUiUtils.dp(requireContext(), iconSizeDp)
+                    ).apply {
+                        setMargins(
+                            AppUiUtils.dp(requireContext(), 2),
+                            AppUiUtils.dp(requireContext(), 2),
+                            AppUiUtils.dp(requireContext(), 2),
+                            AppUiUtils.dp(requireContext(), 2)
+                        )
+                    }
+                }
+
+                grid.addView(icon)
+            }
+        }
+
+        fun updateFolderStates() {
+            folderViews.forEach { (item, folderCard) ->
+                folderCard.alpha = if (item == expandedItem) 0.92f else 1f
+            }
+        }
+
+        fun createExpandedPanel(item: ExpandableCategoryItem): View {
+            val panel = layoutInflater.inflate(
+                R.layout.item_category_expanded_panel,
+                categoriesContainer,
+                false
+            ).apply {
+                tag = "expanded_panel"
+                alpha = 0f
+                translationY = -AppUiUtils.dp(requireContext(), 14).toFloat()
+            }
+
+            val expandedPreviewGrid = panel.findViewById<GridLayout>(R.id.expandedPreviewGrid)
+            val txtExpandedCategoryName = panel.findViewById<TextView>(R.id.txtExpandedCategoryName)
+            val txtExpandedCategoryCount = panel.findViewById<TextView>(R.id.txtExpandedCategoryCount)
+            val btnCollapseCategory = panel.findViewById<TextView>(R.id.btnCollapseCategory)
+            val recyclerPanelApps = panel.findViewById<RecyclerView>(R.id.recyclerPanelApps)
+
+            txtExpandedCategoryName.text = item.category.name
+            txtExpandedCategoryCount.text = "${item.category.apps.size} apps"
+            btnCollapseCategory.text = "⌃"
+
+            fillPreviewIcons(expandedPreviewGrid, item.category.apps, 20)
+
+            recyclerPanelApps.apply {
+                layoutManager = GridLayoutManager(requireContext(), 4)
+                adapter = ExpandedAppsAdapter(item.category.apps) { app: InstalledApp ->
+                    RecentAppsManager.registerAppOpen(requireContext(), app)
+                    AppLauncher.openApp(requireContext(), app.packageName, app.name)
+                }
+                overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+                isNestedScrollingEnabled = false
+            }
+
+            btnCollapseCategory.setOnClickListener {
+                val panelToRemove = expandedPanel ?: return@setOnClickListener
+
+                panelToRemove.animate()
+                    .alpha(0f)
+                    .translationY(-AppUiUtils.dp(requireContext(), 12).toFloat())
+                    .setDuration(180)
+                    .withEndAction {
+                        categoriesContainer.removeView(panelToRemove)
+                        expandedPanel = null
+                        expandedItem = null
+                        categories.forEach { it.isExpanded = false }
+                        updateFolderStates()
+                    }
+                    .start()
+            }
+
+            panel.post {
+                panel.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(230)
+                    .start()
+            }
+
+            return panel
+        }
+
+        fun insertPanelBelowItem(item: ExpandableCategoryItem) {
+            val rowIndex = categories.indexOf(item) / 4
+            val rowView = rowViews.getOrNull(rowIndex) ?: return
+
+            val rowPositionInContainer = categoriesContainer.indexOfChild(rowView)
+            val insertIndex = rowPositionInContainer + 1
+
+            val newPanel = createExpandedPanel(item)
+
+            TransitionManager.beginDelayedTransition(
+                categoriesContainer,
+                AutoTransition().apply {
+                    duration = 220
+                }
+            )
+
+            categoriesContainer.addView(newPanel, insertIndex)
+
+            expandedPanel = newPanel
+            expandedItem = item
+            categories.forEach { it.isExpanded = it == item }
+
+            updateFolderStates()
+        }
+
+        fun closePanelThen(openNext: ExpandableCategoryItem? = null) {
+            val panelToRemove = expandedPanel
+
+            if (panelToRemove == null) {
+                expandedPanel = null
+                expandedItem = null
+                categories.forEach { it.isExpanded = false }
+                updateFolderStates()
+
+                if (openNext != null) {
+                    insertPanelBelowItem(openNext)
+                }
+
+                return
+            }
+
+            panelToRemove.animate()
+                .alpha(0f)
+                .translationY(-AppUiUtils.dp(requireContext(), 12).toFloat())
+                .setDuration(160)
+                .withEndAction {
+                    TransitionManager.beginDelayedTransition(
+                        categoriesContainer,
+                        AutoTransition().apply {
+                            duration = 200
+                        }
+                    )
+
+                    categoriesContainer.removeView(panelToRemove)
+                    expandedPanel = null
+                    expandedItem = null
+                    categories.forEach { it.isExpanded = false }
+                    updateFolderStates()
+
+                    if (openNext != null) {
+                        categoriesContainer.post {
+                            insertPanelBelowItem(openNext)
+                        }
+                    }
+                }
+                .start()
+        }
+
+        fun createFolderView(item: ExpandableCategoryItem): View {
+            val view = layoutInflater.inflate(
+                R.layout.item_expandable_category_folder,
+                categoriesContainer,
+                false
+            )
+
+            val folderCard = view.findViewById<LinearLayout>(R.id.folderCard)
+            val iconPreviewGrid = view.findViewById<GridLayout>(R.id.iconPreviewGrid)
+            val txtCategoryName = view.findViewById<TextView>(R.id.txtCategoryName)
+            val txtCategoryCount = view.findViewById<TextView>(R.id.txtCategoryCount)
+
+            txtCategoryName.text = item.category.name
+            txtCategoryCount.text = "${item.category.apps.size} apps"
+
+            fillPreviewIcons(iconPreviewGrid, item.category.apps, 22)
+
+            folderViews[item] = folderCard
+
+            folderCard.setOnClickListener {
+                AnimationUtils.press(folderCard) {
+                    if (item.category.name == "Todas las apps") {
+                        openFragment(AllAppsFragment())
+                        return@press
+                    }
+
+                    when {
+                        expandedItem == null -> {
+                            insertPanelBelowItem(item)
+                        }
+
+                        expandedItem == item -> {
+                            closePanelThen(null)
+                        }
+
+                        else -> {
+                            closePanelThen(item)
+                        }
+                    }
+                }
+            }
+
+            return view
+        }
+
+        categories.chunked(4).forEach { rowItems ->
+            val row = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            rowItems.forEach { item ->
+                val folderView = createFolderView(item)
+
+                folderView.layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+
+                row.addView(folderView)
+            }
+
+            repeat(4 - rowItems.size) {
+                row.addView(
+                    View(requireContext()).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            0,
+                            1,
+                            1f
+                        )
+                    }
+                )
+            }
+
+            rowViews.add(row)
+            categoriesContainer.addView(row)
+        }
+
+        root.addView(categoriesContainer)
+    }
     private fun openFragment(fragment: Fragment) {
         val containerId = (requireView().parent as ViewGroup).id
 
