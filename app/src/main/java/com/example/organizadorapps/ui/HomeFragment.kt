@@ -226,14 +226,7 @@ class HomeFragment : Fragment() {
         root.addView(normalContent)
         root.addView(searchContent)
 
-        normalContent.addView(
-            quickActions(
-                onSearchClick = {
-                    searchEditText.requestFocus()
-                    enterSearchMode()
-                }
-            )
-        )
+
 
         addRecentSection(normalContent, recentApps)
         addFavoritesSection(normalContent, favoriteApps)
@@ -243,89 +236,6 @@ class HomeFragment : Fragment() {
         return scroll
     }
 
-    private fun quickActions(
-        onSearchClick: () -> Unit
-    ): LinearLayout {
-        return LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER
-            background = AppUiUtils.glassCard()
-
-            setPadding(
-                AppUiUtils.quickActionsHorizontalPadding(requireContext()),
-                AppUiUtils.quickActionsVerticalPadding(requireContext()),
-                AppUiUtils.quickActionsHorizontalPadding(requireContext()),
-                AppUiUtils.quickActionsVerticalPadding(requireContext())
-            )
-
-            minimumHeight = AppUiUtils.quickActionsMinHeight(requireContext())
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, 0, 0, AppUiUtils.dp(requireContext(), 12))
-            }
-
-            addView(
-                AppUiUtils.quickAction(
-                    context = requireContext(),
-                    iconRes = R.drawable.ic_action_all_apps,
-                    label = "Buscar apps"
-                ) {
-                    onSearchClick()
-                }
-            )
-
-            addView(AppUiUtils.verticalDivider(requireContext()))
-
-            addView(
-                AppUiUtils.quickAction(
-                    context = requireContext(),
-                    iconRes = R.drawable.ic_action_favorite,
-                    label = "Añadir favorito"
-                ) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Mantén presionada una app para agregarla a favoritos",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            )
-
-            addView(AppUiUtils.verticalDivider(requireContext()))
-
-            addView(
-                AppUiUtils.quickAction(
-                    context = requireContext(),
-                    iconRes = R.drawable.ic_action_scan,
-                    label = "Escanear apps"
-                ) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Tus apps ya fueron detectadas automáticamente",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            )
-
-            addView(AppUiUtils.verticalDivider(requireContext()))
-
-            addView(
-                AppUiUtils.quickAction(
-                    context = requireContext(),
-                    iconRes = R.drawable.ic_action_magic,
-                    label = "Más Categorías"
-                ) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Categorías sugeridas automáticamente",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            )
-        }
-    }
 
     private fun addRecentSection(
         root: LinearLayout,
@@ -436,7 +346,7 @@ class HomeFragment : Fragment() {
         categories: MutableList<ExpandableCategoryItem>
     ) {
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 0, 4) {
+            AppUiUtils.sectionRow(requireContext(), "Categorías", "Editar", 0, 4) {
                 Toast.makeText(
                     requireContext(),
                     "Edición de categorías próximamente",

@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
-import com.example.organizadorapps.ui.FavoritesFragment
 import com.example.organizadorapps.ui.HomeFragment
 import com.example.organizadorapps.ui.UsageFragment
 
@@ -23,11 +22,10 @@ class MainActivity : AppCompatActivity() {
     private val containerId = 1001
 
     private val navHome = 1
-    private val navFavorites = 2
+
     private val navUsage = 3
 
     private lateinit var homeItem: LinearLayout
-    private lateinit var favoritesItem: LinearLayout
     private lateinit var usageItem: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,13 +76,7 @@ class MainActivity : AppCompatActivity() {
             openFragment(HomeFragment())
         }
 
-        favoritesItem = createNavItem(
-            title = "Favoritos",
-            iconRes = android.R.drawable.btn_star_big_off
-        ) {
-            selectNav(navFavorites)
-            openFragment(FavoritesFragment())
-        }
+
 
         usageItem = createNavItem(
             title = "Uso",
@@ -95,7 +87,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         bottomBar.addView(homeItem)
-        bottomBar.addView(favoritesItem)
         bottomBar.addView(usageItem)
 
         root.addView(fragmentContainer)
@@ -196,7 +187,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectNav(selected: Int) {
         updateNavItem(homeItem, selected == navHome)
-        updateNavItem(favoritesItem, selected == navFavorites)
         updateNavItem(usageItem, selected == navUsage)
     }
 
