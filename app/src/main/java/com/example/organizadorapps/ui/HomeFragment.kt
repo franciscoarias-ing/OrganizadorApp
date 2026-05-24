@@ -1,10 +1,13 @@
 package com.example.organizadorapps.ui
 
+import androidx.activity.OnBackPressedCallback
 import com.example.organizadorapps.AnimationUtils
 import com.example.organizadorapps.ExpandedAppsAdapter
 import android.graphics.Color
 import android.graphics.Typeface
-
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -28,6 +31,7 @@ import com.example.organizadorapps.AppCategory
 import com.example.organizadorapps.AppLauncher
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
+import com.example.organizadorapps.AppUiUtils.searchBox
 import com.example.organizadorapps.CategoryFolderAdapter
 import com.example.organizadorapps.CategorySuggestionEngine
 import com.example.organizadorapps.ExpandableCategoryItem
@@ -36,7 +40,8 @@ import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.R
 import com.example.organizadorapps.RecentAppsManager
 import com.example.organizadorapps.UiConstants
-
+import com.google.android.material.internal.ViewUtils.hideKeyboard
+import com.google.android.material.internal.ViewUtils.showKeyboard
 class HomeFragment : Fragment() {
 
     private lateinit var allApps: List<InstalledApp>
@@ -67,13 +72,6 @@ class HomeFragment : Fragment() {
             }
             .toMutableList()
 
-        categories.add(
-            ExpandableCategoryItem(
-                category = AppCategory("Todas las apps", allApps),
-                isExpanded = false
-            )
-        )
-
         val scroll = ScrollView(requireContext()).apply {
             setBackgroundColor(UiConstants.BACKGROUND)
             overScrollMode = View.OVER_SCROLL_NEVER
@@ -82,7 +80,6 @@ class HomeFragment : Fragment() {
 
         val root = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-
             setPadding(
                 AppUiUtils.dp(requireContext(), 14),
                 AppUiUtils.dp(requireContext(), 12),
@@ -93,26 +90,162 @@ class HomeFragment : Fragment() {
 
         root.addView(AppUiUtils.title(requireContext(), "Inicio Inteligente"))
 
-        root.addView(
-            AppUiUtils.searchButton(
-                context = requireContext(),
-                hint = "Buscar apps..."
-            ) {
-                openFragment(AllAppsFragment())
+        val normalContent = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        val searchContent = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+
+        lateinit var searchEditText: EditText
+
+        var isSearchMode = false
+        var ignoreSearchChange = false
+
+        lateinit var backCallback: OnBackPressedCallback
+
+        fun exitSearchMode() {
+            if (!isSearchMode) return
+
+            ignoreSearchChange = true
+            searchEditText.setText("")
+            ignoreSearchChange = false
+
+            searchContent.removeAllViews()
+            searchContent.visibility = View.GONE
+            normalContent.visibility = View.VISIBLE
+
+            hideKeyboard(searchEditText)
+            searchEditText.clearFocus()
+
+            isSearchMode = false
+            backCallback.isEnabled = false
+        }
+
+        fun enterSearchMode() {
+            if (isSearchMode) return
+
+            isSearchMode = true
+            backCallback.isEnabled = true
+
+            normalContent.visibility = View.GONE
+            searchContent.visibility = View.VISIBLE
+
+            searchContent.removeAllViews()
+            searchContent.addView(
+                AppUiUtils.sectionRow(requireContext(), "Resultados", "Volver", 0, 8) {
+                    exitSearchMode()
+                }
+            )
+
+            searchContent.addView(
+                AppUiUtils.miniEmpty(requireContext(), "Escribe el nombre de una app.")
+            )
+
+            showKeyboard(searchEditText)
+        }
+
+        fun renderSearchResults(query: String) {
+            if (ignoreSearchChange) return
+
+            searchContent.removeAllViews()
+
+            searchContent.addView(
+                AppUiUtils.sectionRow(requireContext(), "Resultados", "Volver", 0, 8) {
+                    exitSearchMode()
+                }
+            )
+
+            if (query.isBlank()) {
+                searchContent.addView(
+                    AppUiUtils.miniEmpty(requireContext(), "Escribe el nombre de una app.")
+                )
+                return
             }
+
+            val results = allApps.filter {
+                it.name.contains(query, ignoreCase = true)
+            }
+
+            if (results.isEmpty()) {
+                searchContent.addView(
+                    AppUiUtils.miniEmpty(requireContext(), "No se encontraron apps.")
+                )
+                return
+            }
+
+            searchContent.addView(
+                RecyclerView(requireContext()).apply {
+                    layoutManager = GridLayoutManager(requireContext(), 4)
+
+                    adapter = ExpandedAppsAdapter(results) { app: InstalledApp ->
+                        RecentAppsManager.registerAppOpen(requireContext(), app)
+                        AppLauncher.openApp(requireContext(), app.packageName, app.name)
+                    }
+
+                    overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+                    isNestedScrollingEnabled = false
+
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = AppUiUtils.dp(requireContext(), 8)
+                    }
+                }
+            )
+        }
+
+        backCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                exitSearchMode()
+            }
+        }
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backCallback
         )
 
-        root.addView(quickActions())
+        searchEditText = AppUiUtils.searchBox(
+            context = requireContext(),
+            hintValue = "Buscar apps..."
+        ) { query ->
+            enterSearchMode()
+            renderSearchResults(query)
+        }
 
-        addRecentSection(root, recentApps)
-        addFavoritesSection(root, favoriteApps)
-        addCategorySection(root, categories)
+        searchEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                enterSearchMode()
+            }
+        }
+        root.addView(searchEditText)
+        root.addView(normalContent)
+        root.addView(searchContent)
+
+        normalContent.addView(
+            quickActions(
+                onSearchClick = {
+                    searchEditText.requestFocus()
+                    enterSearchMode()
+                }
+            )
+        )
+
+        addRecentSection(normalContent, recentApps)
+        addFavoritesSection(normalContent, favoriteApps)
+        addCategorySection(normalContent, categories)
 
         scroll.addView(root)
         return scroll
     }
 
-    private fun quickActions(): LinearLayout {
+    private fun quickActions(
+        onSearchClick: () -> Unit
+    ): LinearLayout {
         return LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER
@@ -138,9 +271,9 @@ class HomeFragment : Fragment() {
                 AppUiUtils.quickAction(
                     context = requireContext(),
                     iconRes = R.drawable.ic_action_all_apps,
-                    label = "Todas las apps"
+                    label = "Buscar apps"
                 ) {
-                    openFragment(AllAppsFragment())
+                    onSearchClick()
                 }
             )
 
@@ -204,13 +337,7 @@ class HomeFragment : Fragment() {
                 textSize = 18f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
-
-                setPadding(
-                    0,
-                    0,
-                    0,
-                    AppUiUtils.dp(requireContext(), 10)
-                )
+                setPadding(0, 0, 0, AppUiUtils.dp(requireContext(), 10))
             }
         )
 
@@ -252,30 +379,23 @@ class HomeFragment : Fragment() {
             }
         )
     }
+
     private fun addFavoritesSection(
         root: LinearLayout,
         apps: List<InstalledApp>
     ) {
-
         root.addView(
             TextView(requireContext()).apply {
                 text = "Favoritos rápidos"
                 textSize = 18f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
-
-                setPadding(
-                    0,
-                    0,
-                    0,
-                    AppUiUtils.dp(requireContext(), 10)
-                )
+                setPadding(0, 0, 0, AppUiUtils.dp(requireContext(), 10))
             }
         )
 
         root.addView(
             RecyclerView(requireContext()).apply {
-
                 layoutManager = LinearLayoutManager(
                     requireContext(),
                     LinearLayoutManager.HORIZONTAL,
@@ -298,13 +418,7 @@ class HomeFragment : Fragment() {
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
                 isNestedScrollingEnabled = false
 
-                setPadding(
-                    0,
-                    0,
-                    AppUiUtils.dp(requireContext(), 6),
-                    0
-                )
-
+                setPadding(0, 0, AppUiUtils.dp(requireContext(), 6), 0)
                 clipToPadding = false
 
                 layoutParams = LinearLayout.LayoutParams(
@@ -316,7 +430,6 @@ class HomeFragment : Fragment() {
             }
         )
     }
-
 
     private fun addCategorySection(
         root: LinearLayout,
@@ -388,8 +501,7 @@ class HomeFragment : Fragment() {
 
             val expandedPreviewGrid = panel.findViewById<GridLayout>(R.id.expandedPreviewGrid)
             val txtExpandedCategoryName = panel.findViewById<TextView>(R.id.txtExpandedCategoryName)
-            val txtExpandedCategoryCount =
-                panel.findViewById<TextView>(R.id.txtExpandedCategoryCount)
+            val txtExpandedCategoryCount = panel.findViewById<TextView>(R.id.txtExpandedCategoryCount)
             val btnCollapseCategory = panel.findViewById<TextView>(R.id.btnCollapseCategory)
             val recyclerPanelApps = panel.findViewById<RecyclerView>(R.id.recyclerPanelApps)
 
@@ -526,11 +638,6 @@ class HomeFragment : Fragment() {
 
             folderCard.setOnClickListener {
                 AnimationUtils.press(folderCard) {
-                    if (item.category.name == "Todas las apps") {
-                        openFragment(AllAppsFragment())
-                        return@press
-                    }
-
                     when {
                         expandedItem == null -> {
                             insertPanelBelowItem(item)
@@ -593,7 +700,20 @@ class HomeFragment : Fragment() {
         root.addView(categoriesContainer)
     }
 
+    private fun showKeyboard(editText: EditText) {
+        editText.post {
+            editText.requestFocus()
+            val imm = requireContext()
+                .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
 
+    private fun hideKeyboard(view: View) {
+        val imm = requireContext()
+            .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
 
     private fun openFragment(fragment: Fragment) {
         val containerId = (requireView().parent as ViewGroup).id
