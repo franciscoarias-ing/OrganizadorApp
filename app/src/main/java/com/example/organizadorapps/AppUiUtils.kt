@@ -318,7 +318,7 @@ object AppUiUtils {
 
             addView(TextView(context).apply {
                 text = title
-                textSize = 22f
+                textSize = 18f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(UiConstants.TEXT_PRIMARY)
                 includeFontPadding = false

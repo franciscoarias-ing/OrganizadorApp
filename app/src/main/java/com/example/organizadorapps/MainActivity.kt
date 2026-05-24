@@ -1,33 +1,37 @@
 package com.example.organizadorapps
 
-import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Menu
+import android.view.Gravity
+import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import com.example.organizadorapps.ui.FavoritesFragment
 import com.example.organizadorapps.ui.HomeFragment
 import com.example.organizadorapps.ui.UsageFragment
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.navigation.NavigationBarView
 
 class MainActivity : AppCompatActivity() {
 
     private val containerId = 1001
-    private val navHome = 1
 
-    private val navFavorites = 3
-    private val navUsage = 4
+    private val navHome = 1
+    private val navFavorites = 2
+    private val navUsage = 3
+
+    private lateinit var homeItem: LinearLayout
+    private lateinit var favoritesItem: LinearLayout
+    private lateinit var usageItem: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         supportActionBar?.hide()
 
         val root = LinearLayout(this).apply {
@@ -38,7 +42,6 @@ class MainActivity : AppCompatActivity() {
         val fragmentContainer = FrameLayout(this).apply {
             id = containerId
             setBackgroundColor(UiConstants.BACKGROUND)
-
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -46,74 +49,67 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val bottomNav = BottomNavigationView(this).apply {
+        val bottomBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(
+                AppUiUtils.dp(this@MainActivity, 10),
+                AppUiUtils.dp(this@MainActivity, 6),
+                AppUiUtils.dp(this@MainActivity, 10),
+                AppUiUtils.dp(this@MainActivity, 6)
+            )
+
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = AppUiUtils.dp(this@MainActivity, 28).toFloat()
+                cornerRadius = AppUiUtils.dp(this@MainActivity, 18).toFloat()
                 setColor(Color.parseColor("#0F172A"))
                 setStroke(
                     AppUiUtils.dp(this@MainActivity, 1),
                     Color.parseColor("#1E293B")
                 )
             }
-
-            itemIconTintList = ColorStateList(
-                arrayOf(
-                    intArrayOf(android.R.attr.state_checked),
-                    intArrayOf()
-                ),
-                intArrayOf(
-                    UiConstants.ACCENT,
-                    UiConstants.TEXT_SECONDARY
-                )
-            )
-
-            itemTextColor = ColorStateList(
-                arrayOf(
-                    intArrayOf(android.R.attr.state_checked),
-                    intArrayOf()
-                ),
-                intArrayOf(
-                    UiConstants.ACCENT,
-                    UiConstants.TEXT_SECONDARY
-                )
-            )
-
-            itemRippleColor = ColorStateList.valueOf(Color.TRANSPARENT)
-            itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
-            labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
-
-            menu.add(Menu.NONE, navHome, Menu.NONE, "Inicio")
-                .setIcon(android.R.drawable.ic_menu_view)
-
-
-            menu.add(Menu.NONE, navFavorites, Menu.NONE, "Favoritos")
-                .setIcon(android.R.drawable.btn_star_big_off)
-
-            menu.add(Menu.NONE, navUsage, Menu.NONE, "Uso")
-                .setIcon(android.R.drawable.ic_menu_sort_by_size)
-
-            setOnItemSelectedListener { item ->
-                when (item.itemId) {
-                    navHome -> openFragment(HomeFragment())
-                    navFavorites -> openFragment(FavoritesFragment())
-                    navUsage -> openFragment(UsageFragment())
-                }
-                true
-            }
         }
 
+        homeItem = createNavItem(
+            title = "Inicio",
+            iconRes = android.R.drawable.ic_menu_view
+        ) {
+            selectNav(navHome)
+            openFragment(HomeFragment())
+        }
+
+        favoritesItem = createNavItem(
+            title = "Favoritos",
+            iconRes = android.R.drawable.btn_star_big_off
+        ) {
+            selectNav(navFavorites)
+            openFragment(FavoritesFragment())
+        }
+
+        usageItem = createNavItem(
+            title = "Uso",
+            iconRes = android.R.drawable.ic_menu_sort_by_size
+        ) {
+            selectNav(navUsage)
+            openFragment(UsageFragment())
+        }
+
+        bottomBar.addView(homeItem)
+        bottomBar.addView(favoritesItem)
+        bottomBar.addView(usageItem)
+
         root.addView(fragmentContainer)
+
         root.addView(
-            bottomNav,
+            bottomBar,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(this, 66)
+                AppUiUtils.dp(this, 64)
             ).apply {
                 setMargins(
-                    AppUiUtils.dp(this@MainActivity, 16),
+                    AppUiUtils.dp(this@MainActivity, 14),
                     0,
-                    AppUiUtils.dp(this@MainActivity, 16),
+                    AppUiUtils.dp(this@MainActivity, 14),
                     AppUiUtils.dp(this@MainActivity, 8)
                 )
             }
@@ -131,7 +127,7 @@ class MainActivity : AppCompatActivity() {
                 0
             )
 
-            bottomNav.setPadding(
+            root.setPadding(
                 0,
                 0,
                 0,
@@ -144,8 +140,97 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.requestApplyInsets(root)
 
         if (savedInstanceState == null) {
-            bottomNav.selectedItemId = navHome
+            selectNav(navHome)
             openFragment(HomeFragment())
+        }
+    }
+
+    private fun createNavItem(
+        title: String,
+        iconRes: Int,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1f
+            )
+
+            addView(
+                ImageView(this@MainActivity).apply {
+                    setImageResource(iconRes)
+                    tag = "icon"
+
+                    layoutParams = LinearLayout.LayoutParams(
+                        AppUiUtils.dp(this@MainActivity, 20),
+                        AppUiUtils.dp(this@MainActivity, 20)
+                    )
+                }
+            )
+
+            addView(
+                TextView(this@MainActivity).apply {
+                    text = title
+                    tag = "label"
+                    textSize = 11f
+                    includeFontPadding = false
+                    gravity = Gravity.CENTER
+
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = AppUiUtils.dp(this@MainActivity, 4)
+                    }
+                }
+            )
+        }
+    }
+
+    private fun selectNav(selected: Int) {
+        updateNavItem(homeItem, selected == navHome)
+        updateNavItem(favoritesItem, selected == navFavorites)
+        updateNavItem(usageItem, selected == navUsage)
+    }
+
+    private fun updateNavItem(item: LinearLayout, selected: Boolean) {
+        val color = if (selected) UiConstants.ACCENT else UiConstants.TEXT_SECONDARY
+
+        item.background = if (selected) {
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = AppUiUtils.dp(this@MainActivity, 22).toFloat()
+                setColor(Color.parseColor("#1E1238"))
+            }
+        } else {
+            null
+        }
+
+        item.setPadding(
+            0,
+            AppUiUtils.dp(this, 4),
+            0,
+            AppUiUtils.dp(this, 4)
+        )
+
+        for (i in 0 until item.childCount) {
+            val child = item.getChildAt(i)
+
+            if (child is ImageView) {
+                child.setColorFilter(color)
+            }
+
+            if (child is TextView) {
+                child.setTextColor(color)
+                child.typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            }
         }
     }
 

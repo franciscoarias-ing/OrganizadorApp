@@ -131,7 +131,7 @@ class HomeFragment : Fragment() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, 0, 0, AppUiUtils.dp(requireContext(), 18))
+                setMargins(0, 0, 0, AppUiUtils.dp(requireContext(), 12))
             }
 
             addView(
@@ -247,7 +247,7 @@ class HomeFragment : Fragment() {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     AppUiUtils.dp(requireContext(), 66)
                 ).apply {
-                    bottomMargin = AppUiUtils.dp(requireContext(), 18)
+                    bottomMargin = AppUiUtils.dp(requireContext(), 12)
                 }
             }
         )
@@ -311,13 +311,11 @@ class HomeFragment : Fragment() {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     AppUiUtils.dp(requireContext(), 66)
                 ).apply {
-                    bottomMargin = AppUiUtils.dp(requireContext(), 18)
+                    bottomMargin = AppUiUtils.dp(requireContext(), 12)
                 }
             }
         )
     }
-
-
 
 
     private fun addCategorySection(
@@ -325,7 +323,7 @@ class HomeFragment : Fragment() {
         categories: MutableList<ExpandableCategoryItem>
     ) {
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 24, 12) {
+            AppUiUtils.sectionRow(requireContext(), "Mis categorías", "Editar", 0, 4) {
                 Toast.makeText(
                     requireContext(),
                     "Edición de categorías próximamente",
@@ -568,7 +566,10 @@ class HomeFragment : Fragment() {
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
-                )
+                ).apply {
+                    marginEnd = AppUiUtils.dp(requireContext(), 10)
+                    bottomMargin = AppUiUtils.dp(requireContext(), 12)
+                }
 
                 row.addView(folderView)
             }
