@@ -75,16 +75,16 @@ object AppUiUtils {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(context, 20), 0, dp(context, 20), 0)
+            setPadding(dp(context, 18), 0, dp(context, 18), 0)
             background = glassCard()
             isClickable = true
             isFocusable = true
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(context, 58)
+                dp(context, 52)
             ).apply {
-                setMargins(0, 0, 0, dp(context, 20))
+                setMargins(0, 0, 0, dp(context, 18))
             }
 
             setOnClickListener {
@@ -93,7 +93,7 @@ object AppUiUtils {
 
             addView(TextView(context).apply {
                 text = "⌕"
-                textSize = 31f
+                textSize = 27f
                 setTextColor(UiConstants.ACCENT)
                 gravity = Gravity.CENTER
                 includeFontPadding = false
@@ -372,8 +372,8 @@ object AppUiUtils {
     }
 
     fun quickActionsVerticalPadding(context: Context): Int {
-        return (quickActionIconSize(context) * 0.24f).toInt()
-            .coerceIn(dp(context, 12), dp(context, 16))
+        return (quickActionIconSize(context) * 0.20f).toInt()
+            .coerceIn(dp(context, 9), dp(context, 13))
     }
 
     fun quickActionsMinHeight(context: Context): Int {
@@ -383,8 +383,8 @@ object AppUiUtils {
     }
 
     private fun quickActionIconSize(context: Context): Int {
-        return (context.resources.displayMetrics.widthPixels * 0.135f).toInt()
-            .coerceIn(dp(context, 50), dp(context, 58))
+        return (context.resources.displayMetrics.widthPixels * 0.122f).toInt()
+            .coerceIn(dp(context, 45), dp(context, 52))
     }
 
     private fun quickActionIconInnerPadding(context: Context): Int {

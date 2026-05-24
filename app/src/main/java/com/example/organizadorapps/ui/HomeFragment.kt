@@ -2,8 +2,8 @@ package com.example.organizadorapps.ui
 
 import com.example.organizadorapps.AnimationUtils
 import com.example.organizadorapps.ExpandedAppsAdapter
-
-
+import android.graphics.Color
+import android.graphics.Typeface
 
 import android.widget.GridLayout
 import android.widget.ImageView
@@ -199,8 +199,18 @@ class HomeFragment : Fragment() {
         apps: List<InstalledApp>
     ) {
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Recientes", "Ver todos", 18, 12) {
-                openFragment(AllAppsFragment())
+            TextView(requireContext()).apply {
+                text = "Recientes"
+                textSize = 18f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+
+                setPadding(
+                    0,
+                    0,
+                    0,
+                    AppUiUtils.dp(requireContext(), 10)
+                )
             }
         )
 
@@ -222,30 +232,50 @@ class HomeFragment : Fragment() {
                     false
                 )
 
-                adapter = AppAdapter(apps.take(10), AppAdapter.Mode.RECENT)
+                adapter = AppAdapter(
+                    apps.take(10),
+                    mode = AppAdapter.Mode.RECENT
+                )
+
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
                 isNestedScrollingEnabled = false
 
+                setPadding(0, 0, AppUiUtils.dp(requireContext(), 6), 0)
+                clipToPadding = false
+
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    AppUiUtils.dp(requireContext(), 78)
-                )
+                    AppUiUtils.dp(requireContext(), 66)
+                ).apply {
+                    bottomMargin = AppUiUtils.dp(requireContext(), 18)
+                }
             }
         )
     }
-
     private fun addFavoritesSection(
         root: LinearLayout,
         apps: List<InstalledApp>
     ) {
+
         root.addView(
-            AppUiUtils.sectionRow(requireContext(), "Favoritos rápidos", "Ver todos", 22, 12) {
-                openFragment(FavoritesFragment())
+            TextView(requireContext()).apply {
+                text = "Favoritos rápidos"
+                textSize = 18f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+
+                setPadding(
+                    0,
+                    0,
+                    0,
+                    AppUiUtils.dp(requireContext(), 10)
+                )
             }
         )
 
         root.addView(
             RecyclerView(requireContext()).apply {
+
                 layoutManager = LinearLayoutManager(
                     requireContext(),
                     LinearLayoutManager.HORIZONTAL,
@@ -268,13 +298,27 @@ class HomeFragment : Fragment() {
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
                 isNestedScrollingEnabled = false
 
+                setPadding(
+                    0,
+                    0,
+                    AppUiUtils.dp(requireContext(), 6),
+                    0
+                )
+
+                clipToPadding = false
+
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    AppUiUtils.dp(requireContext(), 118)
-                )
+                    AppUiUtils.dp(requireContext(), 66)
+                ).apply {
+                    bottomMargin = AppUiUtils.dp(requireContext(), 18)
+                }
             }
         )
     }
+
+
+
 
     private fun addCategorySection(
         root: LinearLayout,
@@ -346,7 +390,8 @@ class HomeFragment : Fragment() {
 
             val expandedPreviewGrid = panel.findViewById<GridLayout>(R.id.expandedPreviewGrid)
             val txtExpandedCategoryName = panel.findViewById<TextView>(R.id.txtExpandedCategoryName)
-            val txtExpandedCategoryCount = panel.findViewById<TextView>(R.id.txtExpandedCategoryCount)
+            val txtExpandedCategoryCount =
+                panel.findViewById<TextView>(R.id.txtExpandedCategoryCount)
             val btnCollapseCategory = panel.findViewById<TextView>(R.id.btnCollapseCategory)
             val recyclerPanelApps = panel.findViewById<RecyclerView>(R.id.recyclerPanelApps)
 
@@ -546,6 +591,9 @@ class HomeFragment : Fragment() {
 
         root.addView(categoriesContainer)
     }
+
+
+
     private fun openFragment(fragment: Fragment) {
         val containerId = (requireView().parent as ViewGroup).id
 

@@ -9,7 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
-
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import com.example.organizadorapps.ui.FavoritesFragment
 import com.example.organizadorapps.ui.HomeFragment
 import com.example.organizadorapps.ui.UsageFragment
@@ -46,9 +47,40 @@ class MainActivity : AppCompatActivity() {
         }
 
         val bottomNav = BottomNavigationView(this).apply {
-            setBackgroundColor(UiConstants.SURFACE)
-            itemIconTintList = null
-            itemTextColor = ColorStateList.valueOf(UiConstants.TEXT_SECONDARY)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = AppUiUtils.dp(this@MainActivity, 28).toFloat()
+                setColor(Color.parseColor("#0F172A"))
+                setStroke(
+                    AppUiUtils.dp(this@MainActivity, 1),
+                    Color.parseColor("#1E293B")
+                )
+            }
+
+            itemIconTintList = ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf()
+                ),
+                intArrayOf(
+                    UiConstants.ACCENT,
+                    UiConstants.TEXT_SECONDARY
+                )
+            )
+
+            itemTextColor = ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf()
+                ),
+                intArrayOf(
+                    UiConstants.ACCENT,
+                    UiConstants.TEXT_SECONDARY
+                )
+            )
+
+            itemRippleColor = ColorStateList.valueOf(Color.TRANSPARENT)
+            itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
             labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
             menu.add(Menu.NONE, navHome, Menu.NONE, "Inicio")
@@ -72,7 +104,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         root.addView(fragmentContainer)
-        root.addView(bottomNav)
+        root.addView(
+            bottomNav,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                AppUiUtils.dp(this, 66)
+            ).apply {
+                setMargins(
+                    AppUiUtils.dp(this@MainActivity, 16),
+                    0,
+                    AppUiUtils.dp(this@MainActivity, 16),
+                    AppUiUtils.dp(this@MainActivity, 8)
+                )
+            }
+        )
 
         setContentView(root)
 
