@@ -1,47 +1,46 @@
 package com.example.organizadorapps.ui
 
-import androidx.activity.OnBackPressedCallback
-import com.example.organizadorapps.AnimationUtils
-import com.example.organizadorapps.ExpandedAppsAdapter
+import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
-import android.content.Context
-import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
-import android.widget.GridLayout
-import android.widget.ImageView
-import android.widget.TextView
+import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
 import android.transition.AutoTransition
 import android.transition.TransitionManager
-import androidx.recyclerview.widget.DefaultItemAnimator
-import com.example.organizadorapps.CategoryGridItem
-import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.GridLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.organizadorapps.AnimationUtils
 import com.example.organizadorapps.AppAdapter
-import com.example.organizadorapps.AppCategory
 import com.example.organizadorapps.AppLauncher
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
-import com.example.organizadorapps.AppUiUtils.searchBox
-import com.example.organizadorapps.CategoryFolderAdapter
 import com.example.organizadorapps.CategorySuggestionEngine
+import com.example.organizadorapps.CompactLauncherActivity
 import com.example.organizadorapps.ExpandableCategoryItem
+import com.example.organizadorapps.ExpandedAppsAdapter
 import com.example.organizadorapps.FavoritesManager
 import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.R
 import com.example.organizadorapps.RecentAppsManager
 import com.example.organizadorapps.UiConstants
-import com.google.android.material.internal.ViewUtils.hideKeyboard
-import com.google.android.material.internal.ViewUtils.showKeyboard
+
 class HomeFragment : Fragment() {
 
     private lateinit var allApps: List<InstalledApp>
@@ -88,7 +87,7 @@ class HomeFragment : Fragment() {
             )
         }
 
-        root.addView(AppUiUtils.title(requireContext(), "Inicio Inteligente"))
+        root.addView(buildHomeHeader())
 
         val normalContent = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
@@ -222,11 +221,10 @@ class HomeFragment : Fragment() {
                 enterSearchMode()
             }
         }
+
         root.addView(searchEditText)
         root.addView(normalContent)
         root.addView(searchContent)
-
-
 
         addRecentSection(normalContent, recentApps)
         addFavoritesSection(normalContent, favoriteApps)
@@ -236,6 +234,77 @@ class HomeFragment : Fragment() {
         return scroll
     }
 
+    private fun buildHomeHeader(): LinearLayout {
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(
+                0,
+                0,
+                0,
+                AppUiUtils.dp(requireContext(), 10)
+            )
+
+            addView(
+                TextView(requireContext()).apply {
+                    text = "Inicio"
+                    textSize = 22f
+                    setTypeface(typeface, Typeface.BOLD)
+                    setTextColor(UiConstants.TEXT_PRIMARY)
+                    includeFontPadding = false
+
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                }
+            )
+
+            addView(
+                FrameLayout(requireContext()).apply {
+                    background = collapseButtonBackground()
+                    isClickable = true
+                    isFocusable = true
+
+                    layoutParams = LinearLayout.LayoutParams(
+                        AppUiUtils.dp(requireContext(), 48),
+                        AppUiUtils.dp(requireContext(), 42)
+                    )
+
+                    addView(
+                        ImageView(requireContext()).apply {
+                            setImageResource(R.drawable.ic_collapse_diagonal)
+                            scaleType = ImageView.ScaleType.CENTER
+                        },
+                        FrameLayout.LayoutParams(
+                            AppUiUtils.dp(requireContext(), 26),
+                            AppUiUtils.dp(requireContext(), 26),
+                            Gravity.CENTER
+                        )
+                    )
+
+                    setOnClickListener {
+                        startActivity(
+                            Intent(requireContext(), CompactLauncherActivity::class.java)
+                        )
+                        requireActivity().finish()
+                    }
+                }
+            )
+        }
+    }
+
+    private fun collapseButtonBackground(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(UiConstants.SURFACE_ALT)
+            cornerRadius = AppUiUtils.dp(requireContext(), 22).toFloat()
+            setStroke(
+                AppUiUtils.dp(requireContext(), 1),
+                UiConstants.BORDER
+            )
+        }
+    }
 
     private fun addRecentSection(
         root: LinearLayout,
