@@ -464,4 +464,43 @@ object AppUiUtils {
             setColor(UiConstants.ACCENT_SOFT)
         }
     }
+
+
+    fun roundedDrawable(
+        context: Context,
+        color: Int,
+        radiusDp: Int,
+        strokeColor: Int? = null,
+        strokeWidthDp: Int = 1
+    ): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(context, radiusDp).toFloat()
+            if (strokeColor != null && strokeWidthDp > 0) {
+                setStroke(dp(context, strokeWidthDp), strokeColor)
+            }
+        }
+    }
+
+    fun dashedRoundedDrawable(
+        context: Context,
+        color: Int,
+        radiusDp: Int,
+        strokeColor: Int,
+        strokeWidthDp: Int = 1,
+        dashWidthDp: Int = 8,
+        dashGapDp: Int = 6
+    ): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(context, radiusDp).toFloat()
+            setStroke(
+                dp(context, strokeWidthDp),
+                strokeColor,
+                dp(context, dashWidthDp).toFloat(),
+                dp(context, dashGapDp).toFloat()
+            )
+        }
+    }
+
 }

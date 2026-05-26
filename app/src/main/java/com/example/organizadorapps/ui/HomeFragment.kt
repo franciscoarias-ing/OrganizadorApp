@@ -93,15 +93,7 @@ class HomeFragment : Fragment() {
             isFillViewport = true
         }
 
-        val root = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(
-                AppUiUtils.dp(requireContext(), 14),
-                AppUiUtils.dp(requireContext(), 12),
-                AppUiUtils.dp(requireContext(), 14),
-                AppUiUtils.dp(requireContext(), 12)
-            )
-        }
+        val root = com.example.organizadorapps.LauncherUiFactory.screenRoot(requireContext())
 
         root.addView(buildHomeHeader())
 
@@ -262,62 +254,20 @@ class HomeFragment : Fragment() {
             )
 
             addView(
-                TextView(requireContext()).apply {
-                    text = "Inicio"
-                    textSize = 22f
-                    setTypeface(typeface, Typeface.BOLD)
-                    setTextColor(UiConstants.TEXT_PRIMARY)
-                    includeFontPadding = false
-
-                    layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                    )
-                }
+                com.example.organizadorapps.LauncherUiFactory.headerTitle(
+                    requireContext(),
+                    "Inicio"
+                )
             )
 
             addView(
-                FrameLayout(requireContext()).apply {
-                    background = collapseButtonBackground()
-                    isClickable = true
-                    isFocusable = true
-
-                    layoutParams = LinearLayout.LayoutParams(
-                        AppUiUtils.dp(requireContext(), 48),
-                        AppUiUtils.dp(requireContext(), 42)
-                    )
-
-                    addView(
-                        ImageView(requireContext()).apply {
-                            setImageResource(R.drawable.ic_collapse_diagonal)
-                            scaleType = ImageView.ScaleType.CENTER
-                        },
-                        FrameLayout.LayoutParams(
-                            AppUiUtils.dp(requireContext(), 26),
-                            AppUiUtils.dp(requireContext(), 26),
-                            Gravity.CENTER
-                        )
-                    )
-
-                    setOnClickListener {
-                        startActivity(
-                            Intent(requireContext(), CompactLauncherActivity::class.java)
-                        )
-                        requireActivity().finish()
-                    }
+                com.example.organizadorapps.LauncherUiFactory.iconButton(
+                    context = requireContext(),
+                    iconRes = R.drawable.ic_collapse_diagonal
+                ) {
+                    startActivity(Intent(requireContext(), CompactLauncherActivity::class.java))
+                    requireActivity().finish()
                 }
-            )
-        }
-    }
-
-    private fun collapseButtonBackground(): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(UiConstants.SURFACE_ALT)
-            cornerRadius = AppUiUtils.dp(requireContext(), 22).toFloat()
-            setStroke(
-                AppUiUtils.dp(requireContext(), 1),
-                UiConstants.BORDER
             )
         }
     }
@@ -327,13 +277,12 @@ class HomeFragment : Fragment() {
         apps: List<InstalledApp>
     ) {
         root.addView(
-            TextView(requireContext()).apply {
-                text = "Recientes"
-                textSize = 18f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(Color.WHITE)
-                setPadding(0, 0, 0, AppUiUtils.dp(requireContext(), 10))
-            }
+            com.example.organizadorapps.LauncherUiFactory.sectionTitle(
+                context = requireContext(),
+                textValue = "Recientes",
+                topPaddingDp = 0,
+                bottomPaddingDp = 10
+            )
         )
 
         if (apps.isEmpty()) {
@@ -724,27 +673,12 @@ class HomeFragment : Fragment() {
         var expandedItem: ExpandableCategoryItem? = null
 
         fun fillPreviewIcons(grid: GridLayout, apps: List<InstalledApp>, iconSizeDp: Int) {
-            grid.removeAllViews()
-
-            apps.take(4).forEach { app ->
-                val icon = ImageView(requireContext()).apply {
-                    setImageDrawable(app.icon)
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    layoutParams = ViewGroup.MarginLayoutParams(
-                        AppUiUtils.dp(requireContext(), iconSizeDp),
-                        AppUiUtils.dp(requireContext(), iconSizeDp)
-                    ).apply {
-                        setMargins(
-                            AppUiUtils.dp(requireContext(), 2),
-                            AppUiUtils.dp(requireContext(), 2),
-                            AppUiUtils.dp(requireContext(), 2),
-                            AppUiUtils.dp(requireContext(), 2)
-                        )
-                    }
-                }
-
-                grid.addView(icon)
-            }
+            com.example.organizadorapps.LauncherUiFactory.fillPreviewIcons(
+                context = requireContext(),
+                grid = grid,
+                apps = apps,
+                iconSizeDp = iconSizeDp
+            )
         }
 
         fun updateFolderStates() {

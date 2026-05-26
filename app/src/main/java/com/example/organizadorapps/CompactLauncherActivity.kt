@@ -67,7 +67,12 @@ class CompactLauncherActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setPadding(dp(20), dp(28), dp(20), dp(28))
+            setPadding(
+                dp(UiConstants.COMPACT_OUTER_HORIZONTAL_PADDING_DP),
+                dp(UiConstants.COMPACT_OUTER_VERTICAL_PADDING_DP),
+                dp(UiConstants.COMPACT_OUTER_HORIZONTAL_PADDING_DP),
+                dp(UiConstants.COMPACT_OUTER_VERTICAL_PADDING_DP)
+            )
         }
 
         setContentView(rootContainer)
@@ -125,11 +130,7 @@ class CompactLauncherActivity : AppCompatActivity() {
             isFillViewport = false
         }
 
-        floatingCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = compactBackground()
-            setPadding(dp(14), dp(16), dp(14), dp(8))
-        }
+        floatingCard = LauncherUiFactory.compactCard(this)
 
         floatingCard.addView(buildHeader())
         addAppSection(floatingCard, "Recientes", recentApps)
@@ -149,7 +150,7 @@ class CompactLauncherActivity : AppCompatActivity() {
         rootContainer.addView(
             scroll,
             FrameLayout.LayoutParams(
-                (resources.displayMetrics.widthPixels * 0.84f).toInt(),
+                (resources.displayMetrics.widthPixels * UiConstants.COMPACT_WIDTH_PERCENT).toInt(),
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 gravity = Gravity.CENTER
@@ -164,58 +165,22 @@ class CompactLauncherActivity : AppCompatActivity() {
             setPadding(0, 0, 0, dp(8))
 
             addView(
-                TextView(this@CompactLauncherActivity).apply {
-                    text = "Buscar apps"
-                    textSize = 13f
-                    gravity = Gravity.CENTER_VERTICAL
-                    setTextColor(UiConstants.TEXT_SECONDARY)
-                    background = searchBackground()
-                    isClickable = true
-                    isFocusable = true
-
-                    setPadding(
-                        dp(14),
-                        0,
-                        dp(14),
-                        0
-                    )
-
-                    layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        dp(42),
-                        1f
-                    ).apply {
-                        marginEnd = dp(10)
-                    }
-
-                    setOnClickListener {
-                        startActivity(Intent(this@CompactLauncherActivity, MainActivity::class.java))
-                        finish()
-                    }
+                LauncherUiFactory.compactSearchButton(
+                    context = this@CompactLauncherActivity,
+                    textValue = "Buscar apps"
+                ) {
+                    startActivity(Intent(this@CompactLauncherActivity, MainActivity::class.java))
+                    finish()
                 }
             )
 
             addView(
-                FrameLayout(this@CompactLauncherActivity).apply {
-                    background = expandButtonBackground()
-                    isClickable = true
-                    isFocusable = true
-
-                    layoutParams = LinearLayout.LayoutParams(dp(48), dp(42))
-
-                    addView(
-                        ExpandDiagonalIconView(this@CompactLauncherActivity),
-                        FrameLayout.LayoutParams(
-                            dp(26),
-                            dp(26),
-                            Gravity.CENTER
-                        )
-                    )
-
-                    setOnClickListener {
-                        startActivity(Intent(this@CompactLauncherActivity, MainActivity::class.java))
-                        finish()
-                    }
+                LauncherUiFactory.iconButton(
+                    context = this@CompactLauncherActivity,
+                    iconRes = R.drawable.ic_expand_diagonal
+                ) {
+                    startActivity(Intent(this@CompactLauncherActivity, MainActivity::class.java))
+                    finish()
                 }
             )
         }
@@ -227,30 +192,13 @@ class CompactLauncherActivity : AppCompatActivity() {
         apps: List<InstalledApp>
     ) {
         root.addView(sectionTitle(title))
-
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-        }
-
-        if (apps.isEmpty()) {
-            row.addView(
-                TextView(this).apply {
-                    text = "Sin apps aún"
-                    textSize = 13f
-                    setTextColor(UiConstants.TEXT_SECONDARY)
-                    setPadding(0, dp(4), 0, dp(8))
-                }
+        root.addView(
+            LauncherUiFactory.compactAppRow(
+                context = this,
+                apps = apps,
+                closeAfterLaunch = { finish() }
             )
-        } else {
-            val useWeightedItems = apps.size >= 4
-
-            apps.forEach { app ->
-                row.addView(appIcon(app, useWeightedItems))
-            }
-        }
-
-        root.addView(row)
+        )
     }
 
     private fun addFavoritesSection(root: LinearLayout) {
@@ -344,18 +292,13 @@ class CompactLauncherActivity : AppCompatActivity() {
             return
         }
 
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-        }
-
-        val useWeightedItems = favoriteApps.size >= 4
-
-        favoriteApps.forEach { app ->
-            row.addView(appIcon(app, useWeightedItems))
-        }
-
-        compactFavoritesRowHost.addView(row)
+        compactFavoritesRowHost.addView(
+            LauncherUiFactory.compactAppRow(
+                context = this,
+                apps = favoriteApps,
+                closeAfterLaunch = { finish() }
+            )
+        )
     }
 
     private fun toggleCompactFavoritesEditor() {
@@ -653,7 +596,7 @@ class CompactLauncherActivity : AppCompatActivity() {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            background = folderBackground()
+            background = LauncherUiFactory.categoryFolderBackground(this@CompactLauncherActivity)
             isClickable = true
             isFocusable = true
             setPadding(dp(10), dp(10), dp(10), dp(10))
@@ -672,17 +615,12 @@ class CompactLauncherActivity : AppCompatActivity() {
             useDefaultMargins = false
         }
 
-        item.category.apps.take(4).forEach { app ->
-            iconGrid.addView(
-                ImageView(this).apply {
-                    setImageDrawable(app.icon)
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    layoutParams = ViewGroup.MarginLayoutParams(dp(18), dp(18)).apply {
-                        setMargins(dp(2), dp(2), dp(2), dp(2))
-                    }
-                }
-            )
-        }
+        LauncherUiFactory.fillPreviewIcons(
+            context = this,
+            grid = iconGrid,
+            apps = item.category.apps,
+            iconSizeDp = 18
+        )
 
         previewHolder.addView(
             iconGrid,
@@ -774,7 +712,7 @@ class CompactLauncherActivity : AppCompatActivity() {
     ): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = expandedBackground()
+            background = LauncherUiFactory.categoryExpandedBackground(this@CompactLauncherActivity)
             setPadding(dp(14), dp(12), dp(14), dp(14))
 
             layoutParams = LinearLayout.LayoutParams(
@@ -809,7 +747,7 @@ class CompactLauncherActivity : AppCompatActivity() {
                             textSize = 20f
                             gravity = Gravity.CENTER
                             setTextColor(UiConstants.TEXT_PRIMARY)
-                            background = expandButtonBackground()
+                            background = LauncherUiFactory.pillBackground(this@CompactLauncherActivity)
                             isClickable = true
                             isFocusable = true
 
@@ -879,14 +817,7 @@ class CompactLauncherActivity : AppCompatActivity() {
     }
 
     private fun sectionTitle(textValue: String): TextView {
-        return TextView(this).apply {
-            text = textValue
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(UiConstants.TEXT_PRIMARY)
-            includeFontPadding = false
-            setPadding(0, dp(12), 0, dp(10))
-        }
+        return LauncherUiFactory.sectionTitle(this, textValue)
     }
 
     private fun compactBackground(): GradientDrawable {
