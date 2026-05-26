@@ -48,7 +48,7 @@ object AppActionsBottomSheet {
                 context = context,
                 title = if (isFavorite) "Quitar de favoritos" else "Agregar a favoritos",
                 subtitle = if (isFavorite) "Retira esta app de Favoritos rápidos." else "Añade esta app a Favoritos rápidos.",
-                iconText = if (isFavorite) "−" else "+"
+                iconRes = if (isFavorite) R.drawable.ic_remove else R.drawable.ic_add
             ) {
                 FavoritesManager.toggleFavorite(context, app.packageName)
                 onFavoritesChanged?.invoke()
@@ -66,7 +66,7 @@ object AppActionsBottomSheet {
                 context = context,
                 title = "Ocultar app",
                 subtitle = "No se mostrará en Inicio, búsqueda ni categorías.",
-                iconText = "×"
+                iconRes = R.drawable.ic_hide_app
             ) {
                 HiddenAppsManager.hideApp(context, app.packageName)
                 FavoritesManager.removeFavorite(context, app.packageName)
@@ -81,7 +81,7 @@ object AppActionsBottomSheet {
                 context = context,
                 title = "Info del sistema",
                 subtitle = "Abre la ficha de información de Android.",
-                iconText = "i"
+                iconRes = R.drawable.ic_info
             ) {
                 openIntent(
                     context,
@@ -99,7 +99,7 @@ object AppActionsBottomSheet {
                 context = context,
                 title = "Abrir Play Store",
                 subtitle = "Busca esta app en la tienda.",
-                iconText = "▶"
+                iconRes = R.drawable.ic_play_store
             ) {
                 openPlayStore(context, app.packageName)
                 dialog.dismiss()
@@ -111,7 +111,7 @@ object AppActionsBottomSheet {
                 context = context,
                 title = "Abrir ajustes",
                 subtitle = "Abre Ajustes del sistema Android.",
-                iconText = "⚙"
+                iconRes = R.drawable.ic_settings_gear
             ) {
                 openIntent(
                     context,
@@ -179,7 +179,7 @@ object AppActionsBottomSheet {
         context: Context,
         title: String,
         subtitle: String,
-        iconText: String,
+        iconRes: Int,
         onClick: () -> Unit
     ): View {
         return LinearLayout(context).apply {
@@ -208,13 +208,15 @@ object AppActionsBottomSheet {
             }
 
             addView(
-                TextView(context).apply {
-                    text = iconText
-                    textSize = 18f
-                    typeface = Typeface.DEFAULT_BOLD
-                    gravity = Gravity.CENTER
-                    setTextColor(UiConstants.ACCENT)
-                    includeFontPadding = false
+                ImageView(context).apply {
+                    setImageResource(iconRes)
+                    setColorFilter(UiConstants.ACCENT)
+                    setPadding(
+                        AppUiUtils.dp(context, 9),
+                        AppUiUtils.dp(context, 9),
+                        AppUiUtils.dp(context, 9),
+                        AppUiUtils.dp(context, 9)
+                    )
                     background = AppUiUtils.appIconTile(context)
                     layoutParams = LinearLayout.LayoutParams(
                         AppUiUtils.dp(context, 38),

@@ -32,7 +32,8 @@
         <!-- La app completa vuelve a ser la entrada principal. -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.OrganizadorApps">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

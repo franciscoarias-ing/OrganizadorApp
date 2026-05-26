@@ -30,7 +30,7 @@ data class RecentUsageEventItem(
 data class DeviceUsageSummary(
     val periodLabel: String,
     val totalUsageMs: Long,
-    val yesterdayUsageMs: Long,
+    val previousUsageMs: Long,
     val usageDeltaPercent: Int?,
     val openedAppsCount: Int,
     val backgroundAppsCount: Int,
@@ -42,43 +42,38 @@ data class DeviceUsageSummary(
     val recentEvents: List<RecentUsageEventItem>,
     val topApp: DeviceUsageApp?,
     val socialUsageMs: Long,
-    val productivityUsageMs: Long
+    val productivityUsageMs: Long,
+    val unusedApps: List<InstalledApp>,
+    val totalOpenCount: Int,
+    val averageUsagePerOpenedAppMs: Long,
+    val mostOpenedApp: DeviceUsageApp?
 )
 
 object UsageStatsHelper {
 
     fun hasUsageStatsPermission(context: Context): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-
         val mode = appOps.checkOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
             Process.myUid(),
             context.packageName
         )
-
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
     fun openUsageAccessSettings(context: Context) {
-        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-
-        context.startActivity(intent)
+        context.startActivity(
+            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 
-    fun buildSummary(
-        context: Context,
-        allApps: List<InstalledApp>,
-        daysBack: Int
-    ): DeviceUsageSummary? {
+    fun buildSummary(context: Context, allApps: List<InstalledApp>, daysBack: Int): DeviceUsageSummary? {
         if (!hasUsageStatsPermission(context)) return null
 
         val period = getPeriodBounds(daysBack)
         val previousPeriod = getPreviousPeriodBounds(daysBack)
         val launchableByPackage = allApps.associateBy { it.packageName }
-        val usageStatsManager =
-            context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
         val usageStats = usageStatsManager.queryUsageStats(
             UsageStatsManager.INTERVAL_DAILY,
@@ -94,28 +89,28 @@ object UsageStatsHelper {
 
         val apps = aggregateUsageApps(usageStats, launchableByPackage)
         val previousTotal = previousUsageStats.sumOfLaunchableTime(launchableByPackage.keys)
-        val total = apps.sumOf { it.totalTimeMs }
         val events = queryEvents(usageStatsManager, period.first, period.second, launchableByPackage)
-        val openCounts = events.foregroundCounts
 
         val appsWithOpenCount = apps.map { item ->
-            item.copy(openCount = openCounts[item.app.packageName] ?: item.openCount)
+            item.copy(openCount = events.foregroundCounts[item.app.packageName] ?: item.openCount)
         }
 
+        val total = appsWithOpenCount.sumOf { it.totalTimeMs }
+        val totalOpenCount = events.foregroundCounts.values.sum()
+        val averageUsage = if (appsWithOpenCount.isNotEmpty()) total / appsWithOpenCount.size else 0L
+        val usedPackages = appsWithOpenCount.map { it.app.packageName }.toSet() + events.foregroundPackages
+        val unusedApps = allApps
+            .filterNot { it.packageName in usedPackages }
+            .sortedBy { it.name.lowercase(Locale.getDefault()) }
+
         val hourUsage = usageStats
-            .filter { it.packageName in launchableByPackage.keys }
-            .flatMap { stats ->
-                // UsageStats no da distribución horaria. Como aproximación segura,
-                // asignamos el uso al tramo de última actividad.
-                val hour = Calendar.getInstance().apply { timeInMillis = stats.lastTimeUsed }
-                    .get(Calendar.HOUR_OF_DAY)
-                listOf(hour to stats.totalTimeInForeground)
+            .filter { it.packageName in launchableByPackage.keys && it.totalTimeInForeground > 0L }
+            .groupBy {
+                Calendar.getInstance().apply { timeInMillis = it.lastTimeUsed }.get(Calendar.HOUR_OF_DAY)
             }
-            .groupBy({ it.first }, { it.second })
-            .mapValues { (_, values) -> values.sum() }
+            .mapValues { (_, values) -> values.sumOf { it.totalTimeInForeground } }
 
         val intenseHour = hourUsage.maxByOrNull { it.value }
-        val intenseHourLabel = intenseHour?.key?.let { formatHour(it) } ?: "—"
         val unlocksPerHour = if (events.unlockCount > 0 && period.activeHours > 0) {
             "${(events.unlockCount.toDouble() / period.activeHours).roundToInt()} cada hora aprox."
         } else {
@@ -124,17 +119,11 @@ object UsageStatsHelper {
 
         val delta = if (previousTotal > 0L) {
             (((total - previousTotal).toDouble() / previousTotal.toDouble()) * 100).roundToInt()
-        } else {
-            null
-        }
+        } else null
 
-        val backgroundApps = events.backgroundPackages.size
-        val socialMs = appsWithOpenCount
-            .filter { isSocialApp(it.app) }
-            .sumOf { it.totalTimeMs }
-        val productivityMs = appsWithOpenCount
-            .filter { isProductivityApp(it.app) }
-            .sumOf { it.totalTimeMs }
+        val socialMs = appsWithOpenCount.filter { isSocialApp(it.app) }.sumOf { it.totalTimeMs }
+        val productivityMs = appsWithOpenCount.filter { isProductivityApp(it.app) }.sumOf { it.totalTimeMs }
+        val sortedByUsage = appsWithOpenCount.sortedByDescending { it.totalTimeMs }
 
         return DeviceUsageSummary(
             periodLabel = when (daysBack) {
@@ -143,19 +132,23 @@ object UsageStatsHelper {
                 else -> "$daysBack días"
             },
             totalUsageMs = total,
-            yesterdayUsageMs = previousTotal,
+            previousUsageMs = previousTotal,
             usageDeltaPercent = delta,
             openedAppsCount = events.foregroundPackages.size,
-            backgroundAppsCount = backgroundApps,
+            backgroundAppsCount = events.backgroundPackages.size,
             unlockCount = events.unlockCount,
             unlocksPerHourText = unlocksPerHour,
-            intenseHourLabel = intenseHourLabel,
+            intenseHourLabel = intenseHour?.key?.let { formatHour(it) } ?: "—",
             intenseHourUsageMs = intenseHour?.value ?: 0L,
-            mostUsedApps = appsWithOpenCount.sortedByDescending { it.totalTimeMs }.take(5),
-            recentEvents = events.recentEvents.take(4),
-            topApp = appsWithOpenCount.maxByOrNull { it.totalTimeMs },
+            mostUsedApps = sortedByUsage.take(5),
+            recentEvents = events.recentEvents.take(6),
+            topApp = sortedByUsage.firstOrNull(),
             socialUsageMs = socialMs,
-            productivityUsageMs = productivityMs
+            productivityUsageMs = productivityMs,
+            unusedApps = unusedApps.take(8),
+            totalOpenCount = totalOpenCount,
+            averageUsagePerOpenedAppMs = averageUsage,
+            mostOpenedApp = appsWithOpenCount.maxByOrNull { it.openCount }
         )
     }
 
@@ -163,12 +156,23 @@ object UsageStatsHelper {
         val totalMinutes = (ms / 60000L).toInt()
         val hours = totalMinutes / 60
         val minutes = totalMinutes % 60
-
         return when {
             hours > 0 && minutes > 0 -> "$hours h $minutes min"
             hours > 0 -> "$hours h"
             minutes > 0 -> "$minutes min"
             else -> "0 min"
+        }
+    }
+
+    fun formatCompactDuration(ms: Long): String {
+        val totalMinutes = (ms / 60000L).toInt()
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return when {
+            hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
+            hours > 0 -> "${hours}h"
+            minutes > 0 -> "${minutes}m"
+            else -> "0m"
         }
     }
 
@@ -190,7 +194,6 @@ object UsageStatsHelper {
             .groupBy { it.packageName }
             .mapNotNull { (packageName, stats) ->
                 val app = launchableByPackage[packageName] ?: return@mapNotNull null
-
                 DeviceUsageApp(
                     app = app,
                     totalTimeMs = stats.sumOf { it.totalTimeInForeground },
@@ -217,7 +220,6 @@ object UsageStatsHelper {
 
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-
             val packageName = event.packageName ?: continue
             val app = launchableByPackage[packageName]
 
@@ -230,7 +232,6 @@ object UsageStatsHelper {
                         recent.add(RecentUsageEventItem(app, event.timeStamp, 0L))
                     }
                 }
-
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     if (app != null) {
                         backgroundPackages.add(packageName)
@@ -238,18 +239,11 @@ object UsageStatsHelper {
                         if (start != null) {
                             val duration = (event.timeStamp - start).coerceAtLeast(0L)
                             val index = recent.indexOfLast { it.app.packageName == packageName && it.durationMs == 0L }
-                            if (index >= 0) {
-                                recent[index] = recent[index].copy(durationMs = duration)
-                            }
+                            if (index >= 0) recent[index] = recent[index].copy(durationMs = duration)
                         }
                     }
                 }
-
-                else -> {
-                    if (isUnlockEvent(event.eventType)) {
-                        unlockTimes.add(event.timeStamp)
-                    }
-                }
+                else -> if (isUnlockEvent(event.eventType)) unlockTimes.add(event.timeStamp)
             }
         }
 
@@ -264,35 +258,26 @@ object UsageStatsHelper {
 
     private fun isUnlockEvent(eventType: Int): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            eventType == UsageEvents.Event.KEYGUARD_HIDDEN ||
-                    eventType == UsageEvents.Event.SCREEN_INTERACTIVE
-        } else {
-            false
-        }
+            eventType == UsageEvents.Event.KEYGUARD_HIDDEN || eventType == UsageEvents.Event.SCREEN_INTERACTIVE
+        } else false
     }
 
     private fun List<UsageStats>.sumOfLaunchableTime(launchablePackages: Set<String>): Long {
-        return filter { it.packageName in launchablePackages }
-            .sumOf { it.totalTimeInForeground }
+        return filter { it.packageName in launchablePackages }.sumOf { it.totalTimeInForeground }
     }
 
     private fun getPeriodBounds(daysBack: Int): PeriodBounds {
         val end = Calendar.getInstance()
         val start = Calendar.getInstance()
-
         if (daysBack <= 1) {
             start.set(Calendar.HOUR_OF_DAY, 0)
-            start.set(Calendar.MINUTE, 0)
-            start.set(Calendar.SECOND, 0)
-            start.set(Calendar.MILLISECOND, 0)
         } else {
             start.add(Calendar.DAY_OF_YEAR, -daysBack + 1)
             start.set(Calendar.HOUR_OF_DAY, 0)
-            start.set(Calendar.MINUTE, 0)
-            start.set(Calendar.SECOND, 0)
-            start.set(Calendar.MILLISECOND, 0)
         }
-
+        start.set(Calendar.MINUTE, 0)
+        start.set(Calendar.SECOND, 0)
+        start.set(Calendar.MILLISECOND, 0)
         return PeriodBounds(start.timeInMillis, end.timeInMillis)
     }
 
@@ -307,7 +292,6 @@ object UsageStatsHelper {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, 0)
         }
-
         return SimpleDateFormat("h:mm a", Locale.getDefault())
             .format(calendar.time)
             .lowercase(Locale.getDefault())
@@ -317,13 +301,13 @@ object UsageStatsHelper {
 
     private fun isSocialApp(app: InstalledApp): Boolean {
         val text = "${app.name} ${app.packageName}".lowercase(Locale.getDefault())
-        return listOf("whatsapp", "facebook", "instagram", "messenger", "telegram", "tiktok", "x.com", "twitter")
+        return listOf("whatsapp", "facebook", "instagram", "messenger", "telegram", "tiktok", "twitter", "snapchat")
             .any { text.contains(it) }
     }
 
     private fun isProductivityApp(app: InstalledApp): Boolean {
         val text = "${app.name} ${app.packageName}".lowercase(Locale.getDefault())
-        return listOf("drive", "docs", "sheets", "calendar", "gmail", "notion", "office", "word", "excel", "teams", "slack")
+        return listOf("drive", "docs", "sheets", "calendar", "gmail", "notion", "office", "word", "excel", "teams", "slack", "keep", "trello")
             .any { text.contains(it) }
     }
 
@@ -335,20 +319,11 @@ object UsageStatsHelper {
         val recentEvents: List<RecentUsageEventItem>
     )
 
-    private data class PeriodBounds(
-        val first: Long,
-        val second: Long
-    ) {
-        val activeHours: Int
-            get() = ((second - first) / 3600000L).toInt().coerceAtLeast(1)
+    private data class PeriodBounds(val first: Long, val second: Long) {
+        val activeHours: Int get() = ((second - first) / 3600000L).toInt().coerceAtLeast(1)
     }
 
-    fun getRecentUsedApps(
-        context: Context,
-        allApps: List<InstalledApp>,
-        limit: Int = 4,
-        daysBack: Int = 7
-    ): List<InstalledApp> {
+    fun getRecentUsedApps(context: Context, allApps: List<InstalledApp>, limit: Int = 4, daysBack: Int = 7): List<InstalledApp> {
         return buildSummary(context, allApps, daysBack)?.recentEvents
             ?.map { it.app }
             ?.distinctBy { it.packageName }
@@ -356,12 +331,7 @@ object UsageStatsHelper {
             .orEmpty()
     }
 
-    fun getMostUsedApps(
-        context: Context,
-        allApps: List<InstalledApp>,
-        limit: Int = 4,
-        daysBack: Int = 7
-    ): List<InstalledApp> {
+    fun getMostUsedApps(context: Context, allApps: List<InstalledApp>, limit: Int = 4, daysBack: Int = 7): List<InstalledApp> {
         return buildSummary(context, allApps, daysBack)?.mostUsedApps
             ?.map { it.app }
             ?.take(limit)

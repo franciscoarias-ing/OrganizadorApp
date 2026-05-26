@@ -2,7 +2,6 @@ package com.example.organizadorapps
 
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
@@ -33,9 +32,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
-        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
+        WallpaperBackgroundManager.prepareWallpaperWindow(window)
 
         val wallpaperRoot = WallpaperBackgroundManager.buildWallpaperLayer(this)
 
@@ -81,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         homeItem = createNavItem(
             title = "Inicio",
-            iconRes = android.R.drawable.ic_menu_view
+            iconRes = R.drawable.ic_nav_home
         ) {
             selectNav(navHome)
             openFragment(HomeFragment())
@@ -91,7 +88,7 @@ class MainActivity : AppCompatActivity() {
 
         usageItem = createNavItem(
             title = "Uso",
-            iconRes = android.R.drawable.ic_menu_sort_by_size
+            iconRes = R.drawable.ic_nav_usage
         ) {
             selectNav(navUsage)
             openFragment(UsageFragment())
@@ -252,9 +249,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFragment(fragment: Fragment) {
+        val currentFragment = supportFragmentManager.findFragmentById(containerId)
+        if (currentFragment != null && currentFragment::class == fragment::class) return
+
         supportFragmentManager.beginTransaction()
-            .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(containerId, fragment)
+            .setReorderingAllowed(true)
+            .replace(containerId, fragment, fragment::class.java.simpleName)
             .commit()
     }
 }

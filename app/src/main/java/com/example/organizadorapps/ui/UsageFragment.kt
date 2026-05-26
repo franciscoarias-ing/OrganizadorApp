@@ -5,24 +5,29 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.example.organizadorapps.AppLauncher
 import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.DeviceUsageApp
 import com.example.organizadorapps.DeviceUsageSummary
+import com.example.organizadorapps.QuickActionsBar
+import com.example.organizadorapps.R
+import com.example.organizadorapps.RecentAppsManager
 import com.example.organizadorapps.RecentUsageEventItem
 import com.example.organizadorapps.UiConstants
 import com.example.organizadorapps.UsageStatsHelper
+import kotlin.math.abs
 import kotlin.math.max
 
 class UsageFragment : Fragment() {
@@ -39,7 +44,6 @@ class UsageFragment : Fragment() {
         containerRoot = FrameLayout(requireContext()).apply {
             setBackgroundColor(Color.TRANSPARENT)
         }
-
         renderUsageContent()
         return containerRoot!!
     }
@@ -47,10 +51,7 @@ class UsageFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         val currentPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
-
-        if (lastPermissionState != currentPermissionState) {
-            renderUsageContent()
-        }
+        if (lastPermissionState != currentPermissionState) renderUsageContent()
     }
 
     override fun onDestroyView() {
@@ -80,7 +81,7 @@ class UsageFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             setPadding(
                 AppUiUtils.dp(context, 18),
-                AppUiUtils.dp(context, 42),
+                AppUiUtils.dp(context, 38),
                 AppUiUtils.dp(context, 18),
                 AppUiUtils.dp(context, 24)
             )
@@ -90,13 +91,15 @@ class UsageFragment : Fragment() {
         root.addView(periodSelector(context))
 
         if (summary == null) {
+            root.addView(permissionInfoCard(context))
             root.addView(permissionMetricsGrid(context))
-            root.addView(permissionSection(context, "Apps más usadas", "Para mostrar el ranking real de apps, permite el acceso de uso del dispositivo."))
-            root.addView(permissionTwoColumns(context))
+            root.addView(permissionSection(context, "Ranking de uso", "Activa el acceso de uso para ver tus apps más usadas, sesiones recientes y tiempo acumulado."))
+            root.addView(permissionSection(context, "Resumen útil", "Con el permiso podremos calcular apps sin uso, tiempo en redes, productividad y patrones de apertura."))
         } else {
             root.addView(metricsGrid(context, summary))
+            root.addView(insightStrip(context, summary, allApps.size))
             root.addView(mostUsedSection(context, summary))
-            root.addView(bottomSummaryGrid(context, summary))
+            root.addView(bottomSummaryGrid(context, summary, allApps.size))
         }
 
         scroll.addView(root)
@@ -106,52 +109,42 @@ class UsageFragment : Fragment() {
 
     private fun header(context: Context): LinearLayout {
         return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = AppUiUtils.dp(context, 14) }
 
             addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
 
                 addView(TextView(context).apply {
                     text = "Actividad del dispositivo"
                     textSize = 15f
                     setTextColor(UiConstants.ACCENT)
                     includeFontPadding = false
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
 
-                addView(TextView(context).apply {
-                    text = "Uso"
-                    textSize = 42f
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(UiConstants.TEXT_PRIMARY)
-                    includeFontPadding = false
-                    setPadding(0, AppUiUtils.dp(context, 12), 0, 0)
-                })
-
-                addView(TextView(context).apply {
-                    text = "Resumen del uso de tus aplicaciones."
-                    textSize = 16f
-                    setTextColor(UiConstants.TEXT_SECONDARY)
-                    includeFontPadding = false
-                    setPadding(0, AppUiUtils.dp(context, 12), 0, 0)
-                })
+                addView(QuickActionsBar.build(context, compact = true))
             })
 
             addView(TextView(context).apply {
-                text = "↗"
-                textSize = 28f
-                gravity = Gravity.CENTER
-                setTextColor(UiConstants.ACCENT)
-                background = circle(context, Color.argb(190, 39, 27, 72))
-                layoutParams = LinearLayout.LayoutParams(
-                    AppUiUtils.dp(context, 56),
-                    AppUiUtils.dp(context, 56)
-                )
+                text = "Uso"
+                textSize = 42f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 14), 0, 0)
+            })
+
+            addView(TextView(context).apply {
+                text = "Métricas reales de uso, actividad reciente y accesos rápidos del sistema."
+                textSize = 15f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 10), 0, 0)
             })
         }
     }
@@ -166,20 +159,16 @@ class UsageFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 AppUiUtils.dp(context, 58)
-            ).apply { bottomMargin = AppUiUtils.dp(context, 18) }
+            ).apply { bottomMargin = AppUiUtils.dp(context, 16) }
 
             options.forEach { (days, label) ->
                 addView(TextView(context).apply {
                     text = label
-                    textSize = 16f
+                    textSize = 15f
                     gravity = Gravity.CENTER
                     typeface = if (selectedDaysBack == days) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
                     setTextColor(if (selectedDaysBack == days) UiConstants.TEXT_PRIMARY else UiConstants.TEXT_SECONDARY)
-                    background = if (selectedDaysBack == days) {
-                        rounded(context, UiConstants.ACCENT, 28, null)
-                    } else {
-                        null
-                    }
+                    background = if (selectedDaysBack == days) rounded(context, UiConstants.ACCENT, 28, null) else null
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
@@ -194,21 +183,21 @@ class UsageFragment : Fragment() {
 
     private fun metricsGrid(context: Context, summary: DeviceUsageSummary): LinearLayout {
         val deltaText = summary.usageDeltaPercent?.let { value ->
-            val sign = if (value >= 0) "↑" else "↓"
-            "$sign ${kotlin.math.abs(value)}% vs. periodo anterior"
-        } ?: "Sin comparación previa"
+            val sign = if (value >= 0) "subió" else "bajó"
+            "Uso $sign ${abs(value)}% vs. periodo anterior"
+        } ?: "Sin comparación previa suficiente"
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(twoMetricRow(
                 context,
-                metricCard(context, "◷", "Tiempo de uso ${summary.periodLabel.lowercase()}", UsageStatsHelper.formatDuration(summary.totalUsageMs), deltaText),
-                metricCard(context, "▦", "Apps abiertas", summary.openedAppsCount.toString(), "${summary.backgroundAppsCount} en segundo plano")
+                metricCard(context, R.drawable.ic_usage_time, "Tiempo total", UsageStatsHelper.formatCompactDuration(summary.totalUsageMs), deltaText),
+                metricCard(context, R.drawable.ic_usage_apps, "Apps abiertas", summary.openedAppsCount.toString(), "${summary.backgroundAppsCount} pasaron a segundo plano")
             ))
             addView(twoMetricRow(
                 context,
-                metricCard(context, "▢", "Desbloqueos", summary.unlockCount.toString(), summary.unlocksPerHourText),
-                metricCard(context, "♨", "Uso más intenso", summary.intenseHourLabel, UsageStatsHelper.formatDuration(summary.intenseHourUsageMs) + " de uso")
+                metricCard(context, R.drawable.ic_usage_unlock, "Desbloqueos", summary.unlockCount.toString(), summary.unlocksPerHourText),
+                metricCard(context, R.drawable.ic_usage_peak, "Hora intensa", summary.intenseHourLabel, "${UsageStatsHelper.formatCompactDuration(summary.intenseHourUsageMs)} acumulados")
             ))
         }
     }
@@ -218,13 +207,13 @@ class UsageFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             addView(twoMetricRow(
                 context,
-                permissionMetricCard(context, "◷", "Tiempo de uso"),
-                permissionMetricCard(context, "▦", "Apps abiertas")
+                permissionMetricCard(context, R.drawable.ic_usage_time, "Tiempo total"),
+                permissionMetricCard(context, R.drawable.ic_usage_apps, "Apps abiertas")
             ))
             addView(twoMetricRow(
                 context,
-                permissionMetricCard(context, "▢", "Desbloqueos"),
-                permissionMetricCard(context, "♨", "Uso más intenso")
+                permissionMetricCard(context, R.drawable.ic_usage_unlock, "Desbloqueos"),
+                permissionMetricCard(context, R.drawable.ic_usage_peak, "Hora intensa")
             ))
         }
     }
@@ -237,57 +226,53 @@ class UsageFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = AppUiUtils.dp(context, 12) }
 
-            addView(left, LinearLayout.LayoutParams(0, AppUiUtils.dp(context, 112), 1f).apply {
+            addView(left, LinearLayout.LayoutParams(0, AppUiUtils.dp(context, 142), 1f).apply {
                 rightMargin = AppUiUtils.dp(context, 6)
             })
-            addView(right, LinearLayout.LayoutParams(0, AppUiUtils.dp(context, 112), 1f).apply {
+            addView(right, LinearLayout.LayoutParams(0, AppUiUtils.dp(context, 142), 1f).apply {
                 leftMargin = AppUiUtils.dp(context, 6)
             })
         }
     }
 
-    private fun metricCard(context: Context, icon: String, label: String, value: String, detail: String): LinearLayout {
+    private fun metricCard(context: Context, iconRes: Int, label: String, value: String, detail: String): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = glass(context)
-            setPadding(AppUiUtils.dp(context, 14), AppUiUtils.dp(context, 14), AppUiUtils.dp(context, 14), AppUiUtils.dp(context, 14))
+            setPadding(AppUiUtils.dp(context, 12), AppUiUtils.dp(context, 12), AppUiUtils.dp(context, 12), AppUiUtils.dp(context, 12))
 
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 27f
-                gravity = Gravity.CENTER
-                setTextColor(UiConstants.ACCENT)
-                background = circle(context, Color.argb(210, 45, 27, 79))
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 58), AppUiUtils.dp(context, 58))
-            })
+            addView(iconBubble(context, iconRes, AppUiUtils.dp(context, 46)))
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(AppUiUtils.dp(context, 12), 0, 0, 0)
+                setPadding(AppUiUtils.dp(context, 10), 0, 0, 0)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
 
                 addView(TextView(context).apply {
                     text = label
-                    textSize = 14f
+                    textSize = 13f
                     setTextColor(UiConstants.TEXT_SECONDARY)
                     maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                     includeFontPadding = false
                 })
                 addView(TextView(context).apply {
                     text = value
-                    textSize = 26f
+                    textSize = 20f
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(UiConstants.TEXT_PRIMARY)
                     maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                     includeFontPadding = false
                     setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
                 })
                 addView(TextView(context).apply {
                     text = detail
-                    textSize = 13f
+                    textSize = 12f
                     setTextColor(UiConstants.TEXT_SECONDARY)
-                    maxLines = 1
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
                     includeFontPadding = false
                     setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
                 })
@@ -295,19 +280,75 @@ class UsageFragment : Fragment() {
         }
     }
 
-    private fun permissionMetricCard(context: Context, icon: String, label: String): LinearLayout {
-        return metricCard(context, icon, label, "Permiso", "Toca para conceder").apply {
+    private fun permissionMetricCard(context: Context, iconRes: Int, label: String): LinearLayout {
+        return metricCard(context, iconRes, label, "Bloqueado", "Concede acceso de uso para calcularlo").apply {
             isClickable = true
             isFocusable = true
             setOnClickListener { UsageStatsHelper.openUsageAccessSettings(context) }
         }
     }
 
+    private fun permissionInfoCard(context: Context): LinearLayout {
+        return sectionCard(context).apply {
+            addView(sectionTitle(context, "Permiso requerido"))
+            addView(TextView(context).apply {
+                text = "Android protege las estadísticas de uso. Para construir este dashboard debes activar ‘Acceso de uso’ para OrganizadorApps."
+                textSize = 14f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                setPadding(0, AppUiUtils.dp(context, 10), 0, AppUiUtils.dp(context, 14))
+            })
+            addView(permissionButton(context))
+        }
+    }
+
+    private fun insightStrip(context: Context, summary: DeviceUsageSummary, totalApps: Int): LinearLayout {
+        val inactive = (totalApps - summary.openedAppsCount).coerceAtLeast(0)
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = glass(context)
+            setPadding(AppUiUtils.dp(context, 12), AppUiUtils.dp(context, 12), AppUiUtils.dp(context, 12), AppUiUtils.dp(context, 12))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = AppUiUtils.dp(context, 12) }
+
+            addView(miniInsight(context, "Top app", summary.topApp?.app?.name ?: "Sin dato", UiConstants.ACCENT), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(miniInsight(context, "Sin uso", "$inactive apps", Color.parseColor("#38BDF8")), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(miniInsight(context, "Promedio", averageSessionText(summary), Color.parseColor("#22C55E")), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        }
+    }
+
+    private fun miniInsight(context: Context, label: String, value: String, color: Int): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(AppUiUtils.dp(context, 4), 0, AppUiUtils.dp(context, 4), 0)
+            addView(TextView(context).apply {
+                text = label
+                textSize = 11f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+            })
+            addView(TextView(context).apply {
+                text = value
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(color)
+                gravity = Gravity.CENTER
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
+            })
+        }
+    }
+
     private fun mostUsedSection(context: Context, summary: DeviceUsageSummary): LinearLayout {
         val maxTime = max(1L, summary.mostUsedApps.maxOfOrNull { it.totalTimeMs } ?: 1L)
-
         return sectionCard(context).apply {
-            addView(sectionHeader(context, "Apps más usadas ${summary.periodLabel.lowercase()}", "Ver todo"))
+            addView(sectionHeader(context, "Apps más usadas", "Top 5"))
 
             if (summary.mostUsedApps.isEmpty()) {
                 addView(emptyText(context, "Aún no hay uso registrado en este periodo."))
@@ -321,24 +362,29 @@ class UsageFragment : Fragment() {
 
     private fun mostUsedRow(context: Context, position: Int, item: DeviceUsageApp, maxTime: Long): LinearLayout {
         val percentage = (item.totalTimeMs.toFloat() / maxTime.toFloat()).coerceIn(0.04f, 1f)
-
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                RecentAppsManager.registerAppOpen(context, item.app)
+                AppLauncher.openApp(context, item.app.packageName, item.app.name)
+            }
             setPadding(0, AppUiUtils.dp(context, 7), 0, AppUiUtils.dp(context, 7))
 
             addView(TextView(context).apply {
                 text = position.toString()
-                textSize = 18f
+                textSize = 17f
                 setTextColor(UiConstants.ACCENT)
                 gravity = Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 30), LinearLayout.LayoutParams.MATCH_PARENT)
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 28), LinearLayout.LayoutParams.MATCH_PARENT)
             })
 
             addView(ImageView(context).apply {
                 setImageDrawable(item.app.icon)
                 layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 38), AppUiUtils.dp(context, 38)).apply {
-                    rightMargin = AppUiUtils.dp(context, 14)
+                    rightMargin = AppUiUtils.dp(context, 12)
                 }
             })
 
@@ -348,9 +394,10 @@ class UsageFragment : Fragment() {
 
                 addView(TextView(context).apply {
                     text = item.app.name
-                    textSize = 16f
+                    textSize = 15f
                     setTextColor(UiConstants.TEXT_PRIMARY)
                     maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                     includeFontPadding = false
                 })
 
@@ -359,11 +406,10 @@ class UsageFragment : Fragment() {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, AppUiUtils.dp(context, 6)).apply {
                         topMargin = AppUiUtils.dp(context, 10)
                     }
-
                     addView(View(context).apply {
                         background = rounded(context, UiConstants.ACCENT, 6, null)
                         layoutParams = FrameLayout.LayoutParams(0, FrameLayout.LayoutParams.MATCH_PARENT).apply {
-                            width = (context.resources.displayMetrics.widthPixels * 0.45f * percentage).toInt()
+                            width = (context.resources.displayMetrics.widthPixels * 0.44f * percentage).toInt()
                         }
                     })
                 })
@@ -371,77 +417,103 @@ class UsageFragment : Fragment() {
 
             addView(TextView(context).apply {
                 text = UsageStatsHelper.formatDuration(item.totalTimeMs)
-                textSize = 14f
+                textSize = 13f
                 setTextColor(UiConstants.TEXT_SECONDARY)
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 82), LinearLayout.LayoutParams.WRAP_CONTENT)
-            })
-
-            addView(TextView(context).apply {
-                text = "›"
-                textSize = 28f
-                setTextColor(UiConstants.TEXT_SECONDARY)
-                gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 20), LinearLayout.LayoutParams.WRAP_CONTENT)
+                maxLines = 1
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 78), LinearLayout.LayoutParams.WRAP_CONTENT)
             })
         }
     }
 
-    private fun bottomSummaryGrid(context: Context, summary: DeviceUsageSummary): LinearLayout {
+    private fun bottomSummaryGrid(context: Context, summary: DeviceUsageSummary, totalApps: Int): LinearLayout {
         return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = AppUiUtils.dp(context, 14) }
-
-            addView(usefulSummaryCard(context, summary), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                rightMargin = AppUiUtils.dp(context, 6)
-            })
-            addView(recentActivityCard(context, summary.recentEvents), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                leftMargin = AppUiUtils.dp(context, 6)
-            })
+            orientation = LinearLayout.VERTICAL
+            addView(usefulSummaryCard(context, summary, totalApps))
+            addView(unusedAppsCard(context, summary.unusedApps))
+            addView(recentActivityCard(context, summary.recentEvents))
         }
     }
 
-    private fun permissionTwoColumns(context: Context): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = AppUiUtils.dp(context, 14) }
-
-            addView(permissionSection(context, "Resumen útil", "Permite acceso de uso para calcular tu app más usada, tiempo en redes y productividad."), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                rightMargin = AppUiUtils.dp(context, 6)
-            })
-            addView(permissionSection(context, "Actividad reciente", "Permite acceso de uso para listar las últimas apps abiertas del dispositivo."), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                leftMargin = AppUiUtils.dp(context, 6)
-            })
-        }
-    }
-
-    private fun usefulSummaryCard(context: Context, summary: DeviceUsageSummary): LinearLayout {
+    private fun usefulSummaryCard(context: Context, summary: DeviceUsageSummary, totalApps: Int): LinearLayout {
+        val inactive = (totalApps - summary.openedAppsCount).coerceAtLeast(0)
         return sectionCard(context).apply {
             addView(sectionTitle(context, "Resumen útil"))
-            addView(summaryLine(context, "☘", "App más usada", summary.topApp?.app?.name ?: "—", Color.parseColor("#22C55E")))
+            addView(summaryLine(context, R.drawable.ic_usage_apps, "App más usada", summary.topApp?.app?.name ?: "Sin dato", Color.parseColor("#22C55E")))
             addView(separator(context))
-            addView(summaryLine(context, "♙", "Tiempo en redes", UsageStatsHelper.formatDuration(summary.socialUsageMs), Color.parseColor("#38BDF8")))
+            addView(summaryLine(context, R.drawable.ic_usage_time, "Tiempo en redes", UsageStatsHelper.formatDuration(summary.socialUsageMs), Color.parseColor("#38BDF8")))
             addView(separator(context))
-            addView(summaryLine(context, "▣", "Productividad", UsageStatsHelper.formatDuration(summary.productivityUsageMs), UiConstants.ACCENT))
+            addView(summaryLine(context, R.drawable.ic_nav_usage, "Productividad", UsageStatsHelper.formatDuration(summary.productivityUsageMs), UiConstants.ACCENT))
+            addView(separator(context))
+            addView(summaryLine(context, R.drawable.ic_usage_apps, "Apps sin uso", "$inactive de $totalApps", Color.parseColor("#FBBF24")))
         }
     }
 
-    private fun recentActivityCard(context: Context, items: List<RecentUsageEventItem>): LinearLayout {
-        return sectionCard(context).apply {
-            addView(sectionHeader(context, "Actividad reciente", "Ver todo"))
 
-            if (items.isEmpty()) {
-                addView(emptyText(context, "No hay actividad reciente para mostrar."))
+    private fun unusedAppsCard(context: Context, unusedApps: List<com.example.organizadorapps.InstalledApp>): LinearLayout {
+        return sectionCard(context).apply {
+            addView(sectionHeader(context, "Apps sin uso", "Revisar"))
+            if (unusedApps.isEmpty()) {
+                addView(emptyText(context, "Todas tus apps registraron actividad en este periodo."))
             } else {
-                items.forEachIndexed { index, item ->
+                addView(TextView(context).apply {
+                    text = "Apps instaladas que no se abrieron en el periodo seleccionado. Toca una para abrirla."
+                    textSize = 13f
+                    setTextColor(UiConstants.TEXT_SECONDARY)
+                    setPadding(0, 0, 0, AppUiUtils.dp(context, 8))
+                })
+                unusedApps.take(6).forEachIndexed { index, app ->
+                    addView(unusedAppRow(context, app))
+                    if (index < unusedApps.take(6).lastIndex) addView(separator(context))
+                }
+            }
+        }
+    }
+
+    private fun unusedAppRow(context: Context, app: com.example.organizadorapps.InstalledApp): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                RecentAppsManager.registerAppOpen(context, app)
+                AppLauncher.openApp(context, app.packageName, app.name)
+            }
+            setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 8))
+
+            addView(ImageView(context).apply {
+                setImageDrawable(app.icon)
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 34), AppUiUtils.dp(context, 34)).apply {
+                    rightMargin = AppUiUtils.dp(context, 10)
+                }
+            })
+            addView(TextView(context).apply {
+                text = app.name
+                textSize = 14f
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_chevron_right)
+                setColorFilter(UiConstants.TEXT_SECONDARY)
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 20), AppUiUtils.dp(context, 20))
+            })
+        }
+    }
+
+    private fun recentActivityCard(context: Context, recentEvents: List<RecentUsageEventItem>): LinearLayout {
+        return sectionCard(context).apply {
+            addView(sectionHeader(context, "Actividad reciente", "Últimas"))
+            if (recentEvents.isEmpty()) {
+                addView(emptyText(context, "Aún no hay aperturas recientes registradas."))
+            } else {
+                recentEvents.take(5).forEachIndexed { index, item ->
                     addView(recentRow(context, item))
-                    if (index < items.lastIndex) addView(separator(context))
+                    if (index < recentEvents.take(5).lastIndex) addView(separator(context))
                 }
             }
         }
@@ -463,12 +535,12 @@ class UsageFragment : Fragment() {
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-
                 addView(TextView(context).apply {
                     text = item.app.name
                     textSize = 14f
                     setTextColor(UiConstants.TEXT_PRIMARY)
                     maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                     includeFontPadding = false
                 })
                 addView(TextView(context).apply {
@@ -476,6 +548,7 @@ class UsageFragment : Fragment() {
                     textSize = 12f
                     setTextColor(UiConstants.TEXT_SECONDARY)
                     maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                     includeFontPadding = false
                     setPadding(0, AppUiUtils.dp(context, 4), 0, 0)
                 })
@@ -486,40 +559,24 @@ class UsageFragment : Fragment() {
                 textSize = 12f
                 setTextColor(UiConstants.TEXT_SECONDARY)
                 gravity = Gravity.END
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 48), LinearLayout.LayoutParams.WRAP_CONTENT)
-            })
-
-            addView(TextView(context).apply {
-                text = "•"
-                textSize = 20f
-                setTextColor(UiConstants.ACCENT)
-                gravity = Gravity.END
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 16), LinearLayout.LayoutParams.WRAP_CONTENT)
+                maxLines = 1
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 54), LinearLayout.LayoutParams.WRAP_CONTENT)
             })
         }
     }
 
-    private fun summaryLine(context: Context, icon: String, label: String, value: String, color: Int): LinearLayout {
+    private fun summaryLine(context: Context, iconRes: Int, label: String, value: String, color: Int): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, AppUiUtils.dp(context, 10), 0, AppUiUtils.dp(context, 10))
-
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 21f
-                gravity = Gravity.CENTER
-                setTextColor(color)
-                background = circle(context, Color.argb(75, Color.red(color), Color.green(color), Color.blue(color)))
-                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 42), AppUiUtils.dp(context, 42)).apply {
-                    rightMargin = AppUiUtils.dp(context, 10)
-                }
-            })
+            addView(iconBubble(context, iconRes, AppUiUtils.dp(context, 42), color))
 
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    leftMargin = AppUiUtils.dp(context, 10)
+                }
                 addView(TextView(context).apply {
                     text = label
                     textSize = 13f
@@ -531,6 +588,7 @@ class UsageFragment : Fragment() {
                     textSize = 14f
                     setTextColor(color)
                     maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                     typeface = Typeface.DEFAULT_BOLD
                     includeFontPadding = false
                     setPadding(0, AppUiUtils.dp(context, 4), 0, 0)
@@ -544,19 +602,19 @@ class UsageFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, 0, 0, AppUiUtils.dp(context, 14))
-
             addView(sectionTitle(context, title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             addView(TextView(context).apply {
                 text = action
-                textSize = 14f
+                textSize = 13f
                 setTextColor(UiConstants.ACCENT)
                 includeFontPadding = false
             })
-            addView(TextView(context).apply {
-                text = "  ›"
-                textSize = 24f
-                setTextColor(UiConstants.ACCENT)
-                includeFontPadding = false
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_chevron_right)
+                setColorFilter(UiConstants.ACCENT)
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 20), AppUiUtils.dp(context, 20)).apply {
+                    leftMargin = AppUiUtils.dp(context, 4)
+                }
             })
         }
     }
@@ -606,12 +664,7 @@ class UsageFragment : Fragment() {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = glass(context)
-            setPadding(
-                AppUiUtils.dp(context, 16),
-                AppUiUtils.dp(context, 16),
-                AppUiUtils.dp(context, 16),
-                AppUiUtils.dp(context, 16)
-            )
+            setPadding(AppUiUtils.dp(context, 16), AppUiUtils.dp(context, 16), AppUiUtils.dp(context, 16), AppUiUtils.dp(context, 16))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -638,6 +691,23 @@ class UsageFragment : Fragment() {
         }
     }
 
+    private fun iconBubble(context: Context, iconRes: Int, size: Int, color: Int = UiConstants.ACCENT): FrameLayout {
+        return FrameLayout(context).apply {
+            background = circle(context, Color.argb(72, Color.red(color), Color.green(color), Color.blue(color)))
+            layoutParams = LinearLayout.LayoutParams(size, size)
+            addView(ImageView(context).apply {
+                setImageResource(iconRes)
+                setColorFilter(color)
+                layoutParams = FrameLayout.LayoutParams((size * 0.48f).toInt(), (size * 0.48f).toInt(), Gravity.CENTER)
+            })
+        }
+    }
+
+    private fun averageSessionText(summary: DeviceUsageSummary): String {
+        val sessions = summary.mostUsedApps.sumOf { it.openCount }.coerceAtLeast(1)
+        return UsageStatsHelper.formatDuration(summary.totalUsageMs / sessions)
+    }
+
     private fun glass(context: Context): GradientDrawable {
         return rounded(context, Color.argb(192, 15, 23, 42), 18, Color.argb(120, 71, 85, 105))
     }
@@ -646,9 +716,7 @@ class UsageFragment : Fragment() {
         return GradientDrawable().apply {
             setColor(color)
             cornerRadius = AppUiUtils.dp(context, radiusDp).toFloat()
-            if (strokeColor != null) {
-                setStroke(AppUiUtils.dp(context, 1), strokeColor)
-            }
+            if (strokeColor != null) setStroke(AppUiUtils.dp(context, 1), strokeColor)
         }
     }
 

@@ -49,14 +49,15 @@
 
         </LinearLayout>
 
-        <TextView
+        <ImageView
             android:id="@+id/btnCollapseCategory"
             android:layout_width="38dp"
             android:layout_height="38dp"
-            android:gravity="center"
-            android:text="⌃"
-            android:textColor="#C084FC"
-            android:textSize="24sp" />
+            android:background="@drawable/bg_favorite_action_circle"
+            android:contentDescription="Contraer categoría"
+            android:padding="8dp"
+            android:src="@drawable/ic_chevron_up"
+            android:tint="#C084FC" />
 
     </LinearLayout>
 

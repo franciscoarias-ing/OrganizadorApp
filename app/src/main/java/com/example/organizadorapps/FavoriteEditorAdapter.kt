@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
@@ -20,21 +21,18 @@ class FavoriteEditorAdapter(
     inner class FavoriteEditorViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val icon: ImageView = itemView.findViewById(R.id.imgFavoriteEditorIcon)
         val name: TextView = itemView.findViewById(R.id.txtFavoriteEditorName)
-        val badge: TextView = itemView.findViewById(R.id.txtFavoriteEditorBadge)
-        val dragHandle: TextView = itemView.findViewById(R.id.txtFavoriteEditorDragHandle)
-        val action: TextView = itemView.findViewById(R.id.btnFavoriteEditorAction)
+        val badge: LinearLayout = itemView.findViewById(R.id.txtFavoriteEditorBadge)
+        val dragHandle: ImageView = itemView.findViewById(R.id.txtFavoriteEditorDragHandle)
+        val action: ImageView = itemView.findViewById(R.id.btnFavoriteEditorAction)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FavoriteEditorViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_favorite_editor_app, parent, false)
-
         return FavoriteEditorViewHolder(view)
     }
 
-    override fun getItemCount(): Int {
-        return visibleApps.size
-    }
+    override fun getItemCount(): Int = visibleApps.size
 
     override fun onBindViewHolder(holder: FavoriteEditorViewHolder, position: Int) {
         val app = visibleApps[position]
@@ -50,16 +48,13 @@ class FavoriteEditorAdapter(
 
         if (isFavorite) {
             holder.badge.visibility = View.VISIBLE
-            holder.badge.text = "✓ Favorito"
             holder.dragHandle.visibility = View.VISIBLE
-            holder.action.text = "−"
-            holder.action.textSize = 24f
+            holder.action.setImageResource(R.drawable.ic_remove)
             holder.itemView.alpha = 1f
         } else {
             holder.badge.visibility = View.GONE
             holder.dragHandle.visibility = View.GONE
-            holder.action.text = "+"
-            holder.action.textSize = 24f
+            holder.action.setImageResource(R.drawable.ic_add)
             holder.itemView.alpha = if (canAdd) 1f else 0.55f
         }
 
@@ -114,19 +109,12 @@ class FavoriteEditorAdapter(
 
     fun filter(query: String) {
         val cleanQuery = query.trim().lowercase()
-
         visibleApps.clear()
-
         if (cleanQuery.isBlank()) {
             visibleApps.addAll(allApps)
         } else {
-            visibleApps.addAll(
-                allApps.filter { app ->
-                    app.name.lowercase().contains(cleanQuery)
-                }
-            )
+            visibleApps.addAll(allApps.filter { app -> app.name.lowercase().contains(cleanQuery) })
         }
-
         notifyDataSetChanged()
     }
 
@@ -134,21 +122,10 @@ class FavoriteEditorAdapter(
         notifyDataSetChanged()
     }
 
-    fun getAppAt(position: Int): InstalledApp? {
-        return visibleApps.getOrNull(position)
-    }
+    fun getAppAt(position: Int): InstalledApp? = visibleApps.getOrNull(position)
 
     fun moveVisibleItem(fromPosition: Int, toPosition: Int) {
-        if (
-            fromPosition < 0 ||
-            toPosition < 0 ||
-            fromPosition >= visibleApps.size ||
-            toPosition >= visibleApps.size ||
-            fromPosition == toPosition
-        ) {
-            return
-        }
-
+        if (fromPosition < 0 || toPosition < 0 || fromPosition >= visibleApps.size || toPosition >= visibleApps.size || fromPosition == toPosition) return
         val movedApp = visibleApps.removeAt(fromPosition)
         visibleApps.add(toPosition, movedApp)
         notifyItemMoved(fromPosition, toPosition)
@@ -157,12 +134,10 @@ class FavoriteEditorAdapter(
     private fun reorderVisibleAppsKeepingFavoritesFirst(context: android.content.Context) {
         val appsByPackage = allApps.associateBy { it.packageName }
         val favoritePackages = FavoritesManager.getFavoritePackageList(context)
-
         val favoriteApps = favoritePackages.mapNotNull { appsByPackage[it] }
         val remainingApps = allApps
             .filterNot { it.packageName in favoritePackages }
             .sortedBy { it.name.lowercase() }
-
         visibleApps.clear()
         visibleApps.addAll(favoriteApps + remainingApps)
     }

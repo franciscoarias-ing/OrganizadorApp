@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.GridLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -180,14 +181,13 @@ class ExpandableCategoryController(
         val expandedPreviewGrid = panel.findViewById<GridLayout>(R.id.expandedPreviewGrid)
         val txtExpandedCategoryName = panel.findViewById<TextView>(R.id.txtExpandedCategoryName)
         val txtExpandedCategoryCount = panel.findViewById<TextView>(R.id.txtExpandedCategoryCount)
-        val btnCollapseCategory = panel.findViewById<TextView>(R.id.btnCollapseCategory)
+        val btnCollapseCategory = panel.findViewById<ImageView>(R.id.btnCollapseCategory)
         val recyclerPanelApps = panel.findViewById<RecyclerView>(R.id.recyclerPanelApps)
 
         txtExpandedCategoryName.text = item.category.name
         txtExpandedCategoryCount.text = "${item.category.apps.size} apps"
-        btnCollapseCategory.text = "⌃"
-        btnCollapseCategory.background = LauncherUiFactory.pillBackground(context)
-        btnCollapseCategory.setTextColor(UiConstants.ACCENT)
+        btnCollapseCategory.setImageResource(R.drawable.ic_chevron_up)
+        btnCollapseCategory.setColorFilter(UiConstants.ACCENT)
 
         LauncherUiFactory.fillPreviewIcons(
             context = context,

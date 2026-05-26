@@ -278,12 +278,19 @@ class AppAdapter(
         }
 
         addCard.addView(
-            TextView(context).apply {
-                text = "+"
-                textSize = 34f
-                gravity = Gravity.CENTER
-                setTextColor(UiConstants.ACCENT)
-                includeFontPadding = false
+            ImageView(context).apply {
+                setImageResource(R.drawable.ic_add)
+                setColorFilter(UiConstants.ACCENT)
+                setPadding(
+                    AppUiUtils.dp(context, 18),
+                    AppUiUtils.dp(context, 18),
+                    AppUiUtils.dp(context, 18),
+                    AppUiUtils.dp(context, 18)
+                )
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
             }
         )
 

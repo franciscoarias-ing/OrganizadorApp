@@ -29,6 +29,7 @@ import com.example.organizadorapps.FavoritesSectionController
 import com.example.organizadorapps.HiddenAppsBottomSheet
 import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.LauncherUiFactory
+import com.example.organizadorapps.QuickActionsBar
 import com.example.organizadorapps.R
 import com.example.organizadorapps.RecentAppsManager
 import com.example.organizadorapps.SmartRecentAppsManager
@@ -273,73 +274,77 @@ class HomeFragment : Fragment() {
         onShowAllApps: () -> Unit,
         onShowHiddenApps: () -> Unit
     ): LinearLayout {
+        fun headerPill(textValue: String, onClick: () -> Unit): TextView {
+            return TextView(requireContext()).apply {
+                text = textValue
+                textSize = 13f
+                setTextColor(UiConstants.ACCENT)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                isClickable = true
+                isFocusable = true
+                background = LauncherUiFactory.pillBackground(requireContext())
+                setPadding(
+                    AppUiUtils.dp(requireContext(), 12),
+                    0,
+                    AppUiUtils.dp(requireContext(), 12),
+                    0
+                )
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    AppUiUtils.dp(requireContext(), UiConstants.HEADER_BUTTON_HEIGHT_DP)
+                ).apply {
+                    marginStart = AppUiUtils.dp(requireContext(), 8)
+                }
+                setOnClickListener {
+                    com.example.organizadorapps.AnimationUtils.press(this) {
+                        onClick()
+                    }
+                }
+            }
+        }
+
         return LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, AppUiUtils.dp(requireContext(), 10))
 
             addView(
-                LauncherUiFactory.headerTitle(
-                    context = requireContext(),
-                    title = "Inicio"
-                )
-            )
+                LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
 
-            addView(
-                TextView(requireContext()).apply {
-                    text = "Ver todas las apps"
-                    textSize = 13f
-                    setTextColor(UiConstants.ACCENT)
-                    gravity = Gravity.CENTER
-                    includeFontPadding = false
-                    isClickable = true
-                    isFocusable = true
-                    background = LauncherUiFactory.pillBackground(requireContext())
-                    setPadding(
-                        AppUiUtils.dp(requireContext(), 12),
-                        0,
-                        AppUiUtils.dp(requireContext(), 12),
-                        0
+                    addView(
+                        LauncherUiFactory.headerTitle(
+                            context = requireContext(),
+                            title = "Inicio"
+                        )
                     )
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        AppUiUtils.dp(requireContext(), UiConstants.HEADER_BUTTON_HEIGHT_DP)
-                    )
-                    setOnClickListener {
-                        com.example.organizadorapps.AnimationUtils.press(this) {
-                            onShowAllApps()
+
+                    addView(
+                        QuickActionsBar.build(requireContext(), compact = true).apply {
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            )
                         }
-                    }
+                    )
                 }
             )
 
             addView(
-                TextView(requireContext()).apply {
-                    text = "Ocultas"
-                    textSize = 13f
-                    setTextColor(UiConstants.ACCENT)
-                    gravity = Gravity.CENTER
-                    includeFontPadding = false
-                    isClickable = true
-                    isFocusable = true
-                    background = LauncherUiFactory.pillBackground(requireContext())
-                    setPadding(
-                        AppUiUtils.dp(requireContext(), 12),
-                        0,
-                        AppUiUtils.dp(requireContext(), 12),
-                        0
-                    )
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        AppUiUtils.dp(requireContext(), UiConstants.HEADER_BUTTON_HEIGHT_DP)
-                    ).apply {
-                        marginStart = AppUiUtils.dp(requireContext(), 8)
-                    }
-                    setOnClickListener {
-                        com.example.organizadorapps.AnimationUtils.press(this) {
-                            onShowHiddenApps()
+                LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL or Gravity.END
+                    setPadding(0, AppUiUtils.dp(requireContext(), 10), 0, 0)
+
+                    addView(
+                        View(requireContext()).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
                         }
-                    }
+                    )
+
+                    addView(headerPill("Ver todas las apps", onShowAllApps))
+                    addView(headerPill("Ocultas", onShowHiddenApps))
                 }
             )
         }

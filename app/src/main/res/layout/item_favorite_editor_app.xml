@@ -27,44 +27,55 @@
         android:textSize="15sp"
         android:textStyle="bold" />
 
-    <TextView
+    <LinearLayout
         android:id="@+id/txtFavoriteEditorBadge"
         android:layout_width="wrap_content"
         android:layout_height="34dp"
         android:layout_marginEnd="8dp"
         android:background="@drawable/bg_favorite_badge"
         android:gravity="center"
-        android:includeFontPadding="false"
         android:minWidth="82dp"
+        android:orientation="horizontal"
         android:paddingStart="10dp"
-        android:paddingEnd="10dp"
-        android:text="✓ Favorito"
-        android:textColor="#C084FC"
-        android:textSize="12sp"
-        android:textStyle="bold" />
+        android:paddingEnd="10dp">
 
-    <TextView
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="5dp"
+            android:src="@drawable/ic_favorite_check"
+            android:tint="#C084FC" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="Favorito"
+            android:textColor="#C084FC"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <ImageView
         android:id="@+id/txtFavoriteEditorDragHandle"
         android:layout_width="34dp"
         android:layout_height="34dp"
         android:layout_marginEnd="8dp"
         android:background="@drawable/bg_favorite_action_circle"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:text="≡"
-        android:textColor="#CBD5E1"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+        android:contentDescription="Ordenar favorito"
+        android:padding="8dp"
+        android:src="@drawable/ic_drag_handle"
+        android:tint="#CBD5E1" />
 
-    <TextView
+    <ImageView
         android:id="@+id/btnFavoriteEditorAction"
         android:layout_width="34dp"
         android:layout_height="34dp"
         android:background="@drawable/bg_favorite_action_circle"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:text="+"
-        android:textColor="#E5E7EB"
-        android:textSize="24sp" />
+        android:contentDescription="Agregar o quitar favorito"
+        android:padding="8dp"
+        android:src="@drawable/ic_add"
+        android:tint="#E5E7EB" />
 
 </LinearLayout>
