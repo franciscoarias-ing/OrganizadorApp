@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.RecyclerView
 
 class FavoriteEditorAdapter(
     private val allApps: List<InstalledApp>,
+    private val maxFavorites: Int = UiConstants.MAX_FAVORITES,
+    private val onLimitReached: (() -> Unit)? = null,
     private val onFavoriteChanged: () -> Unit
 ) : RecyclerView.Adapter<FavoriteEditorAdapter.FavoriteEditorViewHolder>() {
 
@@ -36,6 +38,8 @@ class FavoriteEditorAdapter(
         val app = visibleApps[position]
         val context = holder.itemView.context
         val isFavorite = FavoritesManager.isFavorite(context, app.packageName)
+        val reachedLimit = FavoritesManager.getFavoritePackageList(context).size >= maxFavorites
+        val canAdd = isFavorite || !reachedLimit
 
         holder.icon.setImageDrawable(app.icon)
         holder.name.text = app.name
@@ -45,25 +49,27 @@ class FavoriteEditorAdapter(
             holder.badge.text = "✓ Favorito"
             holder.action.text = "−"
             holder.action.textSize = 24f
+            holder.itemView.alpha = 1f
         } else {
             holder.badge.visibility = View.GONE
             holder.action.text = "+"
             holder.action.textSize = 24f
+            holder.itemView.alpha = if (canAdd) 1f else 0.55f
         }
 
-        holder.itemView.setOnClickListener {
-            FavoritesManager.toggleFavorite(context, app.packageName)
+        val toggleClick = View.OnClickListener {
+            if (!canAdd) {
+                onLimitReached?.invoke()
+                return@OnClickListener
+            }
 
+            FavoritesManager.toggleFavorite(context, app.packageName)
             notifyItemChanged(position)
             onFavoriteChanged()
         }
 
-        holder.action.setOnClickListener {
-            FavoritesManager.toggleFavorite(context, app.packageName)
-
-            notifyItemChanged(position)
-            onFavoriteChanged()
-        }
+        holder.itemView.setOnClickListener(toggleClick)
+        holder.action.setOnClickListener(toggleClick)
     }
 
     fun filter(query: String) {

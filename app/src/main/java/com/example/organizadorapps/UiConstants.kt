@@ -51,4 +51,7 @@ object UiConstants {
     const val COLLAPSE_DURATION_MS = 220L
     const val PANEL_OPEN_DURATION_MS = 230L
     const val PANEL_CLOSE_DURATION_MS = 180L
+
+    // Favorites
+    const val MAX_FAVORITES = 8
 }
