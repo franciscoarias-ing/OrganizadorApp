@@ -12,7 +12,7 @@ object FavoritesManager {
     fun addFavorite(context: Context, packageName: String) {
         val favorites = getFavoritePackageList(context).toMutableList()
 
-        if (packageName !in favorites) {
+        if (packageName !in favorites && favorites.size < UiConstants.MAX_FAVORITES) {
             favorites.add(packageName)
             saveFavoritePackageList(context, favorites)
         }
@@ -67,11 +67,16 @@ object FavoritesManager {
         return legacyFavorites
     }
 
+    fun replaceFavorites(context: Context, favorites: List<String>) {
+        saveFavoritePackageList(context, favorites)
+    }
+
     private fun saveFavoritePackageList(context: Context, favorites: List<String>) {
         val cleanFavorites = favorites
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .distinct()
+            .take(UiConstants.MAX_FAVORITES)
 
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 

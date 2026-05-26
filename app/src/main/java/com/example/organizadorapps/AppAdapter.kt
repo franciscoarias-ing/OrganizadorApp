@@ -89,19 +89,19 @@ class AppAdapter(
 
             mode == Mode.FAVORITE -> {
                 LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
                     background = AppUiUtils.roundedCard()
                     setPadding(
-                        AppUiUtils.dp(context, 9),
                         AppUiUtils.dp(context, 7),
-                        AppUiUtils.dp(context, 9),
-                        AppUiUtils.dp(context, 7)
+                        AppUiUtils.dp(context, 7),
+                        AppUiUtils.dp(context, 7),
+                        AppUiUtils.dp(context, 6)
                     )
 
                     layoutParams = RecyclerView.LayoutParams(
-                        AppUiUtils.dp(context, 130),
-                        AppUiUtils.dp(context, 64)
+                        AppUiUtils.dp(context, 82),
+                        AppUiUtils.dp(context, 72)
                     ).apply {
                         marginEnd = AppUiUtils.dp(context, 8)
                     }
@@ -231,61 +231,37 @@ class AppAdapter(
     private fun bindFavorite(holder: AppViewHolder, app: InstalledApp) {
         val context = holder.container.context
 
-        val iconContainer = LinearLayout(context).apply {
-            gravity = Gravity.CENTER
-            background = AppUiUtils.appIconTile(context)
-
-            layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 44),
-                AppUiUtils.dp(context, 44)
-            )
-        }
-
-        iconContainer.addView(
+        holder.container.addView(
             ImageView(context).apply {
                 setImageDrawable(app.icon)
+
                 layoutParams = LinearLayout.LayoutParams(
-                    AppUiUtils.dp(context, 30),
-                    AppUiUtils.dp(context, 30)
-                )
+                    AppUiUtils.dp(context, 36),
+                    AppUiUtils.dp(context, 36)
+                ).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
             }
         )
 
-        val textColumn = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(AppUiUtils.dp(context, 12), 0, 0, 0)
-
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        }
-
-        textColumn.addView(
+        holder.container.addView(
             TextView(context).apply {
                 text = app.name
-                textSize = 12f
+                textSize = 10.5f
                 typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
                 setTextColor(UiConstants.TEXT_PRIMARY)
                 maxLines = 1
                 includeFontPadding = false
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = AppUiUtils.dp(context, 6)
+                }
             }
         )
-
-        textColumn.addView(
-            TextView(context).apply {
-                text = "Favorito"
-                textSize = 10f
-                setTextColor(UiConstants.TEXT_SECONDARY)
-                maxLines = 1
-                includeFontPadding = false
-                setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
-            }
-        )
-
-        holder.container.addView(iconContainer)
-        holder.container.addView(textColumn)
     }
 
     private fun bindAddFavorite(holder: AppViewHolder) {

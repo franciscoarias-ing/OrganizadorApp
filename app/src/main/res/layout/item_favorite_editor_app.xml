@@ -31,16 +31,29 @@
         android:id="@+id/txtFavoriteEditorBadge"
         android:layout_width="wrap_content"
         android:layout_height="34dp"
-        android:layout_marginEnd="10dp"
+        android:layout_marginEnd="8dp"
         android:background="@drawable/bg_favorite_badge"
         android:gravity="center"
         android:includeFontPadding="false"
-        android:minWidth="92dp"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
+        android:minWidth="82dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:text="✓ Favorito"
         android:textColor="#C084FC"
-        android:textSize="13sp"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/txtFavoriteEditorDragHandle"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_favorite_action_circle"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:text="≡"
+        android:textColor="#CBD5E1"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
     <TextView

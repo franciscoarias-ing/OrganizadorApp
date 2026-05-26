@@ -23,10 +23,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OrganizadorApps">
 
+        <!-- Compact mode queda apagado por ahora: sigue declarado, pero ya no es launcher. -->
         <activity
             android:name=".CompactLauncherActivity"
-            android:exported="true"
-            android:theme="@style/Theme.OrganizadorApps.Transparent">
+            android:exported="false"
+            android:theme="@style/Theme.OrganizadorApps.Transparent" />
+
+        <!-- La app completa vuelve a ser la entrada principal. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,10 +41,6 @@
             </intent-filter>
 
         </activity>
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
 
     </application>
 

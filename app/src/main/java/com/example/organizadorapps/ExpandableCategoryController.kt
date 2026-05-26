@@ -9,7 +9,6 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 /**
@@ -119,6 +118,25 @@ class ExpandableCategoryController(
         val txtCategoryCount = view.findViewById<TextView>(R.id.txtCategoryCount)
 
         folderCard.background = LauncherUiFactory.categoryFolderBackground(context)
+
+        // En Compact Mode el alto real lo controla el root del folder.
+        // El XML tenía folderCard=112dp; si el root era menor, el contenido se cortaba.
+        folderCard.layoutParams = folderCard.layoutParams.apply {
+            height = if (folderHeightDp != null) {
+                ViewGroup.LayoutParams.MATCH_PARENT
+            } else {
+                AppUiUtils.dp(context, 112)
+            }
+        }
+        if (folderHeightDp != null) {
+            folderCard.setPadding(
+                AppUiUtils.dp(context, 6),
+                AppUiUtils.dp(context, 6),
+                AppUiUtils.dp(context, 6),
+                AppUiUtils.dp(context, 6)
+            )
+        }
+
         txtCategoryName.text = item.category.name
         txtCategoryCount.text = "${item.category.apps.size} apps"
 
@@ -177,14 +195,29 @@ class ExpandableCategoryController(
             iconSizeDp = panelPreviewIconSizeDp
         )
 
-        recyclerPanelApps.apply {
-            layoutManager = GridLayoutManager(context, expandedAppsColumns)
-            adapter = ExpandedAppsAdapter(item.category.apps) { app ->
+        // Usamos una grilla expandida real en vez de un RecyclerView wrap_content dentro de ScrollView.
+        // Así se muestran todas las apps de la categoría y el scroll externo puede navegar todo el panel.
+        recyclerPanelApps.visibility = View.GONE
+        (panel as? LinearLayout)?.addView(
+            LauncherUiFactory.expandedAppsGrid(
+                context = context,
+                apps = item.category.apps,
+                columns = expandedAppsColumns,
+                iconSizeDp = if (expandedAppsColumns <= 3) UiConstants.COMPACT_SEARCH_GRID_ICON_SIZE_DP else 34,
+                tileHeightDp = if (expandedAppsColumns <= 3) UiConstants.COMPACT_SEARCH_GRID_TILE_HEIGHT_DP else 78,
+                horizontalGapDp = if (expandedAppsColumns <= 3) 4 else 8,
+                bottomGapDp = if (expandedAppsColumns <= 3) 4 else 8,
+                closeAfterLaunch = null
+            ) { app ->
                 onAppClick(app)
+            },
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = AppUiUtils.dp(context, 12)
             }
-            overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-            isNestedScrollingEnabled = false
-        }
+        )
 
         btnCollapseCategory.setOnClickListener {
             if (isAnimating) return@setOnClickListener

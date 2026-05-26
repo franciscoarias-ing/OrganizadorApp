@@ -30,19 +30,26 @@ object UiConstants {
 
     // Compact mode
     const val COMPACT_COLUMNS = 3
-    const val COMPACT_WIDTH_PERCENT = 0.84f
-    const val COMPACT_OUTER_HORIZONTAL_PADDING_DP = 20
-    const val COMPACT_OUTER_VERTICAL_PADDING_DP = 28
-    const val COMPACT_CARD_HORIZONTAL_PADDING_DP = 14
-    const val COMPACT_CARD_TOP_PADDING_DP = 16
+    // 20% menos ancho que la versión anterior (0.84f -> 0.67f aprox.).
+    const val COMPACT_WIDTH_PERCENT = 0.67f
+    const val COMPACT_OUTER_HORIZONTAL_PADDING_DP = 12
+    const val COMPACT_OUTER_VERTICAL_PADDING_DP = 18
+    const val COMPACT_CARD_HORIZONTAL_PADDING_DP = 10
+    const val COMPACT_CARD_TOP_PADDING_DP = 12
     const val COMPACT_CARD_BOTTOM_PADDING_DP = 8
-    const val COMPACT_CARD_RADIUS_DP = 26
+    const val COMPACT_CARD_RADIUS_DP = 22
+    const val COMPACT_APP_TILE_HEIGHT_DP = 66
+    const val COMPACT_APP_ICON_SIZE_DP = 32
+    const val COMPACT_CATEGORY_FOLDER_HEIGHT_DP = 86
+    const val COMPACT_CATEGORY_PREVIEW_ICON_SIZE_DP = 15
+    const val COMPACT_SEARCH_GRID_TILE_HEIGHT_DP = 68
+    const val COMPACT_SEARCH_GRID_ICON_SIZE_DP = 30
 
     // Shared launcher UI
     const val PILL_RADIUS_DP = 22
-    const val HEADER_BUTTON_WIDTH_DP = 48
-    const val HEADER_BUTTON_HEIGHT_DP = 42
-    const val HEADER_ICON_SIZE_DP = 26
+    const val HEADER_BUTTON_WIDTH_DP = 44
+    const val HEADER_BUTTON_HEIGHT_DP = 38
+    const val HEADER_ICON_SIZE_DP = 22
     const val CATEGORY_FOLDER_RADIUS_DP = 20
     const val CATEGORY_PANEL_RADIUS_DP = 22
 

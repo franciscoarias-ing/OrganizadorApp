@@ -246,7 +246,7 @@ class FavoritesSectionController(
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(context, 66)
+                AppUiUtils.dp(context, 76)
             ).apply {
                 bottomMargin = AppUiUtils.dp(context, 12)
             }
@@ -330,8 +330,10 @@ class FavoritesSectionController(
         val searchInput = editorView.findViewById<EditText>(R.id.editSearchFavorites)
         val recyclerApps = editorView.findViewById<RecyclerView>(R.id.recyclerFavoriteEditorApps)
 
+        var orderTouchHelper: androidx.recyclerview.widget.ItemTouchHelper? = null
+
         val adapter = FavoriteEditorAdapter(
-            allApps = allAppsProvider().sortedBy { it.name.lowercase() },
+            allApps = appsForEditor(),
             maxFavorites = maxFavorites,
             onLimitReached = {
                 android.widget.Toast.makeText(
@@ -339,6 +341,9 @@ class FavoritesSectionController(
                     "Puedes tener hasta $maxFavorites favoritos.",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
+            },
+            onStartDrag = { holder ->
+                orderTouchHelper?.startDrag(holder)
             },
             onFavoriteChanged = {
                 refresh()
@@ -354,6 +359,16 @@ class FavoritesSectionController(
             overScrollMode = RecyclerView.OVER_SCROLL_IF_CONTENT_SCROLLS
             isNestedScrollingEnabled = true
         }
+
+        orderTouchHelper = FavoriteOrderManager.attachToRecyclerView(
+            recyclerView = recyclerApps,
+            adapter = adapter,
+            context = context,
+            onOrderChanged = {
+                refresh()
+                editorAdapter?.refreshFavoritesState()
+            }
+        )
 
         recyclerApps.setOnTouchListener { view, event ->
             view.parent.requestDisallowInterceptTouchEvent(true)
@@ -403,6 +418,19 @@ class FavoritesSectionController(
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
         )
+    }
+
+    private fun appsForEditor(): List<InstalledApp> {
+        val allApps = allAppsProvider()
+        val appsByPackage = allApps.associateBy { it.packageName }
+        val favoritePackages = FavoritesManager.getFavoritePackageList(context)
+
+        val favoriteApps = favoritePackages.mapNotNull { appsByPackage[it] }
+        val remainingApps = allApps
+            .filterNot { it.packageName in favoritePackages }
+            .sortedBy { it.name.lowercase() }
+
+        return favoriteApps + remainingApps
     }
 
     private fun hideKeyboard(view: View) {

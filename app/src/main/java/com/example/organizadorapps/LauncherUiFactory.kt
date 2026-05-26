@@ -236,13 +236,17 @@ object LauncherUiFactory {
             isFocusable = true
 
             layoutParams = if (useWeight) {
-                LinearLayout.LayoutParams(0, AppUiUtils.dp(context, 82), 1f)
+                LinearLayout.LayoutParams(
+                    0,
+                    AppUiUtils.dp(context, UiConstants.COMPACT_APP_TILE_HEIGHT_DP),
+                    1f
+                )
             } else {
                 LinearLayout.LayoutParams(
-                    AppUiUtils.dp(context, 86),
-                    AppUiUtils.dp(context, 82)
+                    AppUiUtils.dp(context, 72),
+                    AppUiUtils.dp(context, UiConstants.COMPACT_APP_TILE_HEIGHT_DP)
                 ).apply {
-                    marginEnd = AppUiUtils.dp(context, 8)
+                    marginEnd = AppUiUtils.dp(context, 6)
                 }
             }
 
@@ -258,8 +262,8 @@ object LauncherUiFactory {
                 ImageView(context).apply {
                     setImageDrawable(app.icon)
                     layoutParams = LinearLayout.LayoutParams(
-                        AppUiUtils.dp(context, 40),
-                        AppUiUtils.dp(context, 40)
+                        AppUiUtils.dp(context, UiConstants.COMPACT_APP_ICON_SIZE_DP),
+                        AppUiUtils.dp(context, UiConstants.COMPACT_APP_ICON_SIZE_DP)
                     )
                 }
             )
@@ -267,7 +271,7 @@ object LauncherUiFactory {
             addView(
                 TextView(context).apply {
                     text = app.name
-                    textSize = 11f
+                    textSize = 10f
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
                     gravity = Gravity.CENTER
@@ -277,7 +281,7 @@ object LauncherUiFactory {
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        topMargin = AppUiUtils.dp(context, 6)
+                        topMargin = AppUiUtils.dp(context, 4)
                     }
                 }
             )
@@ -356,6 +360,133 @@ object LauncherUiFactory {
                     addView(compactAppIcon(context, app, useWeightedItems, closeAfterLaunch))
                 }
             }
+        }
+    }
+
+    fun expandedAppsGrid(
+        context: Context,
+        apps: List<InstalledApp>,
+        columns: Int,
+        iconSizeDp: Int = 34,
+        tileHeightDp: Int = 78,
+        horizontalGapDp: Int = 6,
+        bottomGapDp: Int = 8,
+        closeAfterLaunch: (() -> Unit)? = null,
+        onAppClick: (InstalledApp) -> Unit
+    ): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+            apps.chunked(columns).forEach { rowApps ->
+                addView(
+                    LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            bottomMargin = AppUiUtils.dp(context, bottomGapDp)
+                        }
+
+                        rowApps.forEachIndexed { index, app ->
+                            addView(
+                                searchAppTile(
+                                    context = context,
+                                    app = app,
+                                    iconSizeDp = iconSizeDp,
+                                    tileHeightDp = tileHeightDp,
+                                    closeAfterLaunch = closeAfterLaunch,
+                                    onAppClick = onAppClick
+                                ).apply {
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        0,
+                                        AppUiUtils.dp(context, tileHeightDp),
+                                        1f
+                                    ).apply {
+                                        if (index < columns - 1) {
+                                            marginEnd = AppUiUtils.dp(context, horizontalGapDp)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        repeat(columns - rowApps.size) { spacerIndex ->
+                            addView(
+                                View(context).apply {
+                                    layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
+                                        if (rowApps.size + spacerIndex < columns - 1) {
+                                            marginEnd = AppUiUtils.dp(context, horizontalGapDp)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    private fun searchAppTile(
+        context: Context,
+        app: InstalledApp,
+        iconSizeDp: Int,
+        tileHeightDp: Int,
+        closeAfterLaunch: (() -> Unit)?,
+        onAppClick: (InstalledApp) -> Unit
+    ): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            isFocusable = true
+            setPadding(
+                AppUiUtils.dp(context, 4),
+                AppUiUtils.dp(context, 5),
+                AppUiUtils.dp(context, 4),
+                AppUiUtils.dp(context, 5)
+            )
+
+            setOnClickListener {
+                AnimationUtils.press(this) {
+                    onAppClick(app)
+                    closeAfterLaunch?.invoke()
+                }
+            }
+
+            addView(
+                ImageView(context).apply {
+                    setImageDrawable(app.icon)
+                    layoutParams = LinearLayout.LayoutParams(
+                        AppUiUtils.dp(context, iconSizeDp),
+                        AppUiUtils.dp(context, iconSizeDp)
+                    )
+                }
+            )
+
+            addView(
+                TextView(context).apply {
+                    text = app.name
+                    textSize = 10.5f
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
+                    gravity = Gravity.CENTER
+                    setTextColor(UiConstants.TEXT_PRIMARY)
+                    includeFontPadding = false
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = AppUiUtils.dp(context, 5)
+                    }
+                }
+            )
         }
     }
 

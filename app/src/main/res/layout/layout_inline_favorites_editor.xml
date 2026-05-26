@@ -41,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:includeFontPadding="false"
-                android:text="Toca una app para agregarla o quitarla"
+                android:text="Toca para agregar/quitar. Mantén y arrastra favoritos para ordenar."
                 android:textColor="#9CA3AF"
                 android:textSize="12sp" />
 
