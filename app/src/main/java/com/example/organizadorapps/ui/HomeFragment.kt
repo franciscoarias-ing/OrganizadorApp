@@ -1,17 +1,22 @@
 package com.example.organizadorapps.ui
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.transition.AutoTransition
 import android.transition.TransitionManager
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -35,15 +40,26 @@ import com.example.organizadorapps.CategorySuggestionEngine
 import com.example.organizadorapps.CompactLauncherActivity
 import com.example.organizadorapps.ExpandableCategoryItem
 import com.example.organizadorapps.ExpandedAppsAdapter
+import com.example.organizadorapps.FavoriteEditorAdapter
 import com.example.organizadorapps.FavoritesManager
 import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.R
 import com.example.organizadorapps.RecentAppsManager
+import com.example.organizadorapps.SmartRecentAppsManager
 import com.example.organizadorapps.UiConstants
+import com.example.organizadorapps.UsageStatsHelper
 
 class HomeFragment : Fragment() {
 
     private lateinit var allApps: List<InstalledApp>
+    private var lastPermissionState: Boolean? = null
+
+    private lateinit var favoritesRowHost: LinearLayout
+    private lateinit var favoritesEditorHost: FrameLayout
+    private lateinit var favoritesActionText: TextView
+
+    private var isFavoritesEditorExpanded = false
+    private var favoriteEditorAdapter: FavoriteEditorAdapter? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,14 +67,14 @@ class HomeFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         allApps = AppRepository.getInstalledLaunchableApps(requireContext())
+        lastPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
 
-        val favoritePackages = FavoritesManager.getFavoritePackages(requireContext())
-        val favoriteApps = allApps.filter { favoritePackages.contains(it.packageName) }
-
-        val recentPackages = RecentAppsManager.getRecentPackageNames(requireContext())
-        val recentApps = recentPackages.mapNotNull { packageName ->
-            allApps.find { it.packageName == packageName }
-        }
+        val recentApps = SmartRecentAppsManager.getRecentApps(
+            context = requireContext(),
+            allApps = allApps,
+            limit = 4,
+            daysBack = 7
+        )
 
         val categories = CategorySuggestionEngine
             .categorizeApps(allApps)
@@ -227,7 +243,7 @@ class HomeFragment : Fragment() {
         root.addView(searchContent)
 
         addRecentSection(normalContent, recentApps)
-        addFavoritesSection(normalContent, favoriteApps)
+        addFavoritesSection(normalContent)
         addCategorySection(normalContent, categories)
 
         scroll.addView(root)
@@ -324,7 +340,7 @@ class HomeFragment : Fragment() {
             root.addView(
                 AppUiUtils.miniEmpty(
                     requireContext(),
-                    "Abre apps desde OrganizadorApp para verlas aquí."
+                    "Sin apps recientes por ahora."
                 )
             )
             return
@@ -359,21 +375,112 @@ class HomeFragment : Fragment() {
         )
     }
 
-    private fun addFavoritesSection(
-        root: LinearLayout,
-        apps: List<InstalledApp>
-    ) {
-        root.addView(
-            TextView(requireContext()).apply {
-                text = "Favoritos rápidos"
-                textSize = 18f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(Color.WHITE)
-                setPadding(0, 0, 0, AppUiUtils.dp(requireContext(), 10))
-            }
-        )
+    private fun addFavoritesSection(root: LinearLayout) {
+        root.addView(buildFavoritesHeader())
 
-        root.addView(
+        favoritesRowHost = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        root.addView(favoritesRowHost)
+
+        favoritesEditorHost = FrameLayout(requireContext()).apply {
+            visibility = View.GONE
+            alpha = 0f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0
+            ).apply {
+                bottomMargin = AppUiUtils.dp(requireContext(), 12)
+            }
+        }
+
+        root.addView(favoritesEditorHost)
+
+        refreshFavoritesRow()
+    }
+
+    private fun buildFavoritesHeader(): LinearLayout {
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(
+                0,
+                0,
+                0,
+                AppUiUtils.dp(requireContext(), 10)
+            )
+
+            addView(
+                TextView(requireContext()).apply {
+                    text = "Favoritos rápidos"
+                    textSize = 18f
+                    setTypeface(typeface, Typeface.BOLD)
+                    setTextColor(Color.WHITE)
+                    includeFontPadding = false
+
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                }
+            )
+
+            favoritesActionText = TextView(requireContext()).apply {
+                text = "Editar"
+                textSize = 14f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(UiConstants.ACCENT)
+                includeFontPadding = false
+                gravity = Gravity.CENTER
+                setPadding(
+                    AppUiUtils.dp(requireContext(), 12),
+                    AppUiUtils.dp(requireContext(), 6),
+                    AppUiUtils.dp(requireContext(), 0),
+                    AppUiUtils.dp(requireContext(), 6)
+                )
+
+                setOnClickListener {
+                    toggleFavoritesEditor()
+                }
+            }
+
+            addView(favoritesActionText)
+        }
+    }
+
+    private fun refreshFavoritesRow() {
+        favoritesRowHost.removeAllViews()
+
+        val favoritePackages = FavoritesManager.getFavoritePackages(requireContext())
+
+        val favoriteApps = allApps
+            .filter { it.packageName in favoritePackages }
+            .take(8)
+
+        if (favoriteApps.isEmpty()) {
+            favoritesRowHost.addView(
+                AppUiUtils.miniEmpty(
+                    requireContext(),
+                    "Agrega tus apps favoritas desde Editar."
+                ).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = AppUiUtils.dp(requireContext(), 12)
+                    }
+                }
+            )
+            return
+        }
+
+        favoritesRowHost.addView(
             RecyclerView(requireContext()).apply {
                 layoutManager = LinearLayoutManager(
                     requireContext(),
@@ -382,16 +489,10 @@ class HomeFragment : Fragment() {
                 )
 
                 adapter = AppAdapter(
-                    apps = apps.take(8),
+                    apps = favoriteApps,
                     mode = AppAdapter.Mode.FAVORITE,
-                    showAddFavorite = true,
-                    onAddFavoriteClick = {
-                        Toast.makeText(
-                            requireContext(),
-                            "Mantén presionada una app para agregarla a favoritos",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    showAddFavorite = false,
+                    onAddFavoriteClick = null
                 )
 
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
@@ -407,6 +508,191 @@ class HomeFragment : Fragment() {
                     bottomMargin = AppUiUtils.dp(requireContext(), 12)
                 }
             }
+        )
+    }
+
+    private fun toggleFavoritesEditor() {
+        if (isFavoritesEditorExpanded) {
+            collapseFavoritesEditor()
+        } else {
+            expandFavoritesEditor()
+        }
+    }
+
+    private fun expandFavoritesEditor() {
+        if (isFavoritesEditorExpanded) return
+
+        ensureFavoritesEditorBuilt()
+
+        isFavoritesEditorExpanded = true
+        favoritesActionText.text = "Cerrar"
+
+        favoritesEditorHost.visibility = View.VISIBLE
+        favoritesEditorHost.alpha = 0f
+        favoritesEditorHost.translationY = -AppUiUtils.dp(requireContext(), 8).toFloat()
+
+        val parentWidth = (favoritesEditorHost.parent as? View)?.width
+            ?: resources.displayMetrics.widthPixels
+
+        favoritesEditorHost.measure(
+            View.MeasureSpec.makeMeasureSpec(parentWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+
+        val targetHeight = favoritesEditorHost.measuredHeight.coerceAtLeast(
+            AppUiUtils.dp(requireContext(), 360)
+        )
+
+        favoritesEditorHost.layoutParams = favoritesEditorHost.layoutParams.apply {
+            height = 0
+        }
+
+        ValueAnimator.ofInt(0, targetHeight).apply {
+            duration = 240L
+            interpolator = AccelerateDecelerateInterpolator()
+
+            addUpdateListener { animator ->
+                val value = animator.animatedValue as Int
+
+                favoritesEditorHost.layoutParams = favoritesEditorHost.layoutParams.apply {
+                    height = value
+                }
+
+                favoritesEditorHost.alpha = animator.animatedFraction
+                favoritesEditorHost.translationY =
+                    -AppUiUtils.dp(requireContext(), 8).toFloat() *
+                            (1f - animator.animatedFraction)
+            }
+
+            start()
+        }
+    }
+
+    private fun collapseFavoritesEditor() {
+        if (!isFavoritesEditorExpanded) return
+        val searchInput = favoritesEditorHost.findViewById<EditText>(R.id.editSearchFavorites)
+        searchInput?.clearFocus()
+
+        if (searchInput != null) {
+            hideKeyboard(searchInput)
+        }
+
+        isFavoritesEditorExpanded = false
+        favoritesActionText.text = "Editar"
+
+        val startHeight = favoritesEditorHost.height
+
+        ValueAnimator.ofInt(startHeight, 0).apply {
+            duration = 220L
+            interpolator = AccelerateDecelerateInterpolator()
+
+            addUpdateListener { animator ->
+                val value = animator.animatedValue as Int
+
+                favoritesEditorHost.layoutParams = favoritesEditorHost.layoutParams.apply {
+                    height = value
+                }
+
+                favoritesEditorHost.alpha = 1f - animator.animatedFraction
+                favoritesEditorHost.translationY =
+                    -AppUiUtils.dp(requireContext(), 8).toFloat() *
+                            animator.animatedFraction
+            }
+
+            addListener(
+                object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        favoritesEditorHost.visibility = View.GONE
+                        favoritesEditorHost.alpha = 0f
+                        favoritesEditorHost.translationY = 0f
+
+                        favoritesEditorHost.layoutParams =
+                            favoritesEditorHost.layoutParams.apply {
+                                height = 0
+                            }
+                    }
+                }
+            )
+
+            start()
+        }
+    }
+
+    private fun ensureFavoritesEditorBuilt() {
+        if (favoritesEditorHost.childCount > 0) return
+
+        val editorView = layoutInflater.inflate(
+            R.layout.layout_inline_favorites_editor,
+            favoritesEditorHost,
+            false
+        )
+
+        val btnCollapse = editorView.findViewById<FrameLayout>(R.id.btnCollapseFavoritesEditor)
+        val searchInput = editorView.findViewById<EditText>(R.id.editSearchFavorites)
+        val recyclerApps = editorView.findViewById<RecyclerView>(R.id.recyclerFavoriteEditorApps)
+
+        val adapter = FavoriteEditorAdapter(
+            allApps = allApps.sortedBy { it.name.lowercase() },
+            onFavoriteChanged = {
+                refreshFavoritesRow()
+                favoriteEditorAdapter?.refreshFavoritesState()
+            }
+        )
+
+        favoriteEditorAdapter = adapter
+
+        recyclerApps.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            this.adapter = adapter
+            overScrollMode = RecyclerView.OVER_SCROLL_IF_CONTENT_SCROLLS
+            isNestedScrollingEnabled = true
+        }
+
+        recyclerApps.setOnTouchListener { view, event ->
+            view.parent.requestDisallowInterceptTouchEvent(true)
+
+            if (
+                event.action == MotionEvent.ACTION_UP ||
+                event.action == MotionEvent.ACTION_CANCEL
+            ) {
+                view.parent.requestDisallowInterceptTouchEvent(false)
+            }
+
+            false
+        }
+
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {
+            }
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) {
+                adapter.filter(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) {
+            }
+        })
+
+        btnCollapse.setOnClickListener {
+            collapseFavoritesEditor()
+        }
+
+        favoritesEditorHost.addView(
+            editorView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
         )
     }
 
@@ -702,5 +988,21 @@ class HomeFragment : Fragment() {
             .replace(containerId, fragment)
             .addToBackStack(null)
             .commit()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val currentPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
+
+        if (lastPermissionState != null && lastPermissionState != currentPermissionState) {
+            val parent = view?.parent as? ViewGroup ?: return
+            val containerId = parent.id
+
+            parentFragmentManager.beginTransaction()
+                .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+                .replace(containerId, HomeFragment())
+                .commit()
+        }
     }
 }

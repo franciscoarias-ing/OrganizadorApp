@@ -9,7 +9,7 @@ object FavoritesManager {
 
     fun addFavorite(context: Context, packageName: String) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        val favorites = prefs.getStringSet(KEY_PACKAGES, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val favorites = getFavoritePackages(context).toMutableSet()
 
         favorites.add(packageName)
 
@@ -20,7 +20,7 @@ object FavoritesManager {
 
     fun removeFavorite(context: Context, packageName: String) {
         val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        val favorites = prefs.getStringSet(KEY_PACKAGES, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val favorites = getFavoritePackages(context).toMutableSet()
 
         favorites.remove(packageName)
 
@@ -29,9 +29,18 @@ object FavoritesManager {
             .apply()
     }
 
+    fun toggleFavorite(context: Context, packageName: String): Boolean {
+        return if (isFavorite(context, packageName)) {
+            removeFavorite(context, packageName)
+            false
+        } else {
+            addFavorite(context, packageName)
+            true
+        }
+    }
+
     fun isFavorite(context: Context, packageName: String): Boolean {
-        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        return prefs.getStringSet(KEY_PACKAGES, emptySet())?.contains(packageName) == true
+        return getFavoritePackages(context).contains(packageName)
     }
 
     fun getFavoritePackages(context: Context): Set<String> {

@@ -74,7 +74,7 @@ class UsageStatsAdapter(
             })
 
             addView(TextView(context).apply {
-                text = "${stat.openCount} aperturas"
+                text = stat.detailText ?: "${stat.openCount} aperturas"
                 textSize = 13f
                 setTextColor(AppUiUtils.subtitleColor())
             })
