@@ -227,7 +227,8 @@ object LauncherUiFactory {
         context: Context,
         app: InstalledApp,
         useWeight: Boolean = true,
-        closeAfterLaunch: (() -> Unit)? = null
+        closeAfterLaunch: (() -> Unit)? = null,
+        onAppLongPress: ((InstalledApp) -> Unit)? = null
     ): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -256,6 +257,11 @@ object LauncherUiFactory {
                     AppLauncher.openApp(context, app.packageName, app.name)
                     closeAfterLaunch?.invoke()
                 }
+            }
+
+            setOnLongClickListener {
+                onAppLongPress?.invoke(app)
+                onAppLongPress != null
             }
 
             addView(
@@ -347,7 +353,12 @@ object LauncherUiFactory {
         }
     }
 
-    fun compactAppRow(context: Context, apps: List<InstalledApp>, closeAfterLaunch: (() -> Unit)?): LinearLayout {
+    fun compactAppRow(
+        context: Context,
+        apps: List<InstalledApp>,
+        closeAfterLaunch: (() -> Unit)?,
+        onAppLongPress: ((InstalledApp) -> Unit)? = null
+    ): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -357,7 +368,7 @@ object LauncherUiFactory {
             } else {
                 val useWeightedItems = apps.size >= UiConstants.COMPACT_COLUMNS
                 apps.forEach { app ->
-                    addView(compactAppIcon(context, app, useWeightedItems, closeAfterLaunch))
+                    addView(compactAppIcon(context, app, useWeightedItems, closeAfterLaunch, onAppLongPress))
                 }
             }
         }
@@ -372,6 +383,7 @@ object LauncherUiFactory {
         horizontalGapDp: Int = 6,
         bottomGapDp: Int = 8,
         closeAfterLaunch: (() -> Unit)? = null,
+        onAppLongPress: ((InstalledApp) -> Unit)? = null,
         onAppClick: (InstalledApp) -> Unit
     ): LinearLayout {
         return LinearLayout(context).apply {
@@ -401,6 +413,7 @@ object LauncherUiFactory {
                                     iconSizeDp = iconSizeDp,
                                     tileHeightDp = tileHeightDp,
                                     closeAfterLaunch = closeAfterLaunch,
+                                    onAppLongPress = onAppLongPress,
                                     onAppClick = onAppClick
                                 ).apply {
                                     layoutParams = LinearLayout.LayoutParams(
@@ -439,6 +452,7 @@ object LauncherUiFactory {
         iconSizeDp: Int,
         tileHeightDp: Int,
         closeAfterLaunch: (() -> Unit)?,
+        onAppLongPress: ((InstalledApp) -> Unit)?,
         onAppClick: (InstalledApp) -> Unit
     ): LinearLayout {
         return LinearLayout(context).apply {
@@ -458,6 +472,11 @@ object LauncherUiFactory {
                     onAppClick(app)
                     closeAfterLaunch?.invoke()
                 }
+            }
+
+            setOnLongClickListener {
+                onAppLongPress?.invoke(app)
+                onAppLongPress != null
             }
 
             addView(

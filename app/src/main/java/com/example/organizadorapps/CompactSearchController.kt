@@ -22,6 +22,7 @@ class CompactSearchController(
     private val host: LinearLayout,
     private val allAppsProvider: () -> List<InstalledApp>,
     private val onBack: () -> Unit,
+    private val onAppLongPress: ((InstalledApp) -> Unit)? = null,
     private val onAppClick: (InstalledApp) -> Unit
 ) {
 
@@ -173,7 +174,8 @@ class CompactSearchController(
                 tileHeightDp = UiConstants.COMPACT_SEARCH_GRID_TILE_HEIGHT_DP,
                 horizontalGapDp = 4,
                 bottomGapDp = 4,
-                closeAfterLaunch = null
+                closeAfterLaunch = null,
+                onAppLongPress = onAppLongPress
             ) { app ->
                 RecentAppsManager.registerAppOpen(context, app)
                 onAppClick(app)

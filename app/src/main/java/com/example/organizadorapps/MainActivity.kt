@@ -2,6 +2,7 @@ package com.example.organizadorapps
 
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
@@ -32,14 +33,24 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
 
+        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
+        val wallpaperRoot = WallpaperBackgroundManager.buildWallpaperLayer(this)
+
+        val wallpaperScrim = View(this).apply {
+            setBackgroundColor(WallpaperBackgroundManager.wallpaperScrimColor())
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(UiConstants.BACKGROUND)
+            setBackgroundColor(Color.TRANSPARENT)
         }
 
         val fragmentContainer = FrameLayout(this).apply {
             id = containerId
-            setBackgroundColor(UiConstants.BACKGROUND)
+            setBackgroundColor(Color.TRANSPARENT)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -106,7 +117,23 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        setContentView(root)
+        wallpaperRoot.addView(
+            wallpaperScrim,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        wallpaperRoot.addView(
+            root,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        setContentView(wallpaperRoot)
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())

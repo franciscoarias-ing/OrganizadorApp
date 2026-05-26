@@ -1,6 +1,7 @@
 package com.example.organizadorapps.ui
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -16,6 +17,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.organizadorapps.AppActionsBottomSheet
 import com.example.organizadorapps.AppAdapter
 import com.example.organizadorapps.AppLauncher
 import com.example.organizadorapps.AppRepository
@@ -24,6 +26,7 @@ import com.example.organizadorapps.CategorySuggestionEngine
 import com.example.organizadorapps.ExpandableCategoryController
 import com.example.organizadorapps.ExpandableCategoryItem
 import com.example.organizadorapps.FavoritesSectionController
+import com.example.organizadorapps.HiddenAppsBottomSheet
 import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.LauncherUiFactory
 import com.example.organizadorapps.R
@@ -61,7 +64,7 @@ class HomeFragment : Fragment() {
             .toMutableList()
 
         val scroll = ScrollView(requireContext()).apply {
-            setBackgroundColor(UiConstants.BACKGROUND)
+            setBackgroundColor(Color.TRANSPARENT)
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = true
         }
@@ -148,7 +151,8 @@ class HomeFragment : Fragment() {
                     tileHeightDp = 78,
                     horizontalGapDp = 8,
                     bottomGapDp = 10,
-                    closeAfterLaunch = null
+                    closeAfterLaunch = null,
+                    onAppLongPress = { app -> showAppActions(app) }
                 ) { app ->
                     RecentAppsManager.registerAppOpen(requireContext(), app)
                     AppLauncher.openApp(requireContext(), app.packageName, app.name)
@@ -214,6 +218,11 @@ class HomeFragment : Fragment() {
             buildHomeHeader(
                 onShowAllApps = {
                     enterSearchMode(shouldShowKeyboard = true)
+                },
+                onShowHiddenApps = {
+                    HiddenAppsBottomSheet.show(requireContext()) {
+                        reloadHome()
+                    }
                 }
             )
         )
@@ -260,7 +269,10 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun buildHomeHeader(onShowAllApps: () -> Unit): LinearLayout {
+    private fun buildHomeHeader(
+        onShowAllApps: () -> Unit,
+        onShowHiddenApps: () -> Unit
+    ): LinearLayout {
         return LinearLayout(requireContext()).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -300,6 +312,36 @@ class HomeFragment : Fragment() {
                     }
                 }
             )
+
+            addView(
+                TextView(requireContext()).apply {
+                    text = "Ocultas"
+                    textSize = 13f
+                    setTextColor(UiConstants.ACCENT)
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                    isClickable = true
+                    isFocusable = true
+                    background = LauncherUiFactory.pillBackground(requireContext())
+                    setPadding(
+                        AppUiUtils.dp(requireContext(), 12),
+                        0,
+                        AppUiUtils.dp(requireContext(), 12),
+                        0
+                    )
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        AppUiUtils.dp(requireContext(), UiConstants.HEADER_BUTTON_HEIGHT_DP)
+                    ).apply {
+                        marginStart = AppUiUtils.dp(requireContext(), 8)
+                    }
+                    setOnClickListener {
+                        com.example.organizadorapps.AnimationUtils.press(this) {
+                            onShowHiddenApps()
+                        }
+                    }
+                }
+            )
         }
     }
 
@@ -329,9 +371,10 @@ class HomeFragment : Fragment() {
                 )
                 adapter = AppAdapter(
                     apps = apps,
-                    mode = AppAdapter.Mode.FAVORITE,
+                    mode = AppAdapter.Mode.RECENT,
                     showAddFavorite = false,
-                    onAddFavoriteClick = null
+                    onAddFavoriteClick = null,
+                    onLongPress = { app -> showAppActions(app) }
                 )
                 overScrollMode = RecyclerView.OVER_SCROLL_NEVER
                 isNestedScrollingEnabled = false
@@ -339,7 +382,7 @@ class HomeFragment : Fragment() {
                 clipToPadding = false
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    AppUiUtils.dp(requireContext(), 66)
+                    AppUiUtils.dp(requireContext(), 72)
                 ).apply {
                     bottomMargin = AppUiUtils.dp(requireContext(), 12)
                 }
@@ -356,7 +399,8 @@ class HomeFragment : Fragment() {
             displayLimit = UiConstants.MAX_FAVORITES,
             maxFavorites = UiConstants.MAX_FAVORITES,
             closeAfterLaunch = null,
-            bottomMarginDp = 12
+            bottomMarginDp = 12,
+            onAppLongPress = { app -> showAppActions(app) }
         ).also { controller ->
             controller.addTo(root)
         }
@@ -392,13 +436,34 @@ class HomeFragment : Fragment() {
             folderMarginEndDp = 10,
             folderBottomMarginDp = 12,
             folderPreviewIconSizeDp = 22,
-            panelPreviewIconSizeDp = 20
+            panelPreviewIconSizeDp = 20,
+            onAppLongPress = { app -> showAppActions(app) }
         ) { app ->
             RecentAppsManager.registerAppOpen(requireContext(), app)
             AppLauncher.openApp(requireContext(), app.packageName, app.name)
         }.also { controller ->
             controller.attachTo(root)
         }
+    }
+
+    private fun showAppActions(app: InstalledApp) {
+        AppActionsBottomSheet.show(
+            context = requireContext(),
+            app = app,
+            onFavoritesChanged = {
+                favoritesController?.refresh()
+            },
+            onHiddenChanged = {
+                reloadHome()
+            }
+        )
+    }
+
+    private fun reloadHome() {
+        if (!isAdded) return
+        parentFragmentManager.beginTransaction()
+            .replace(id, HomeFragment())
+            .commitAllowingStateLoss()
     }
 
     private fun showKeyboard(view: View) {

@@ -228,6 +228,7 @@ class CompactLauncherActivity : AppCompatActivity() {
             onBack = {
                 renderNormalContent()
             },
+            onAppLongPress = { app -> showAppActions(app) },
             onAppClick = { app ->
                 RecentAppsManager.registerAppOpen(this, app)
                 AppLauncher.openApp(this, app.packageName, app.name)
@@ -258,7 +259,8 @@ class CompactLauncherActivity : AppCompatActivity() {
                 apps = apps,
                 closeAfterLaunch = {
                     finish()
-                }
+                },
+                onAppLongPress = { app -> showAppActions(app) }
             )
         )
     }
@@ -274,7 +276,8 @@ class CompactLauncherActivity : AppCompatActivity() {
             closeAfterLaunch = {
                 finish()
             },
-            bottomMarginDp = 8
+            bottomMarginDp = 8,
+            onAppLongPress = { app -> showAppActions(app) }
         ).also { controller ->
             controller.addTo(root)
         }
@@ -303,7 +306,8 @@ class CompactLauncherActivity : AppCompatActivity() {
             folderMarginEndDp = 8,
             folderBottomMarginDp = 8,
             folderPreviewIconSizeDp = 17,
-            panelPreviewIconSizeDp = 17
+            panelPreviewIconSizeDp = 17,
+            onAppLongPress = { app -> showAppActions(app) }
         ) { app ->
             RecentAppsManager.registerAppOpen(this, app)
             AppLauncher.openApp(this, app.packageName, app.name)
@@ -311,6 +315,19 @@ class CompactLauncherActivity : AppCompatActivity() {
         }.also { controller ->
             controller.attachTo(root)
         }
+    }
+
+    private fun showAppActions(app: InstalledApp) {
+        AppActionsBottomSheet.show(
+            context = this,
+            app = app,
+            onFavoritesChanged = {
+                favoritesController?.refresh()
+            },
+            onHiddenChanged = {
+                renderContent()
+            }
+        )
     }
 
     private fun isTouchInsideView(view: View, x: Int, y: Int): Boolean {

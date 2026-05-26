@@ -3,7 +3,6 @@ package com.example.organizadorapps
 import android.content.Context
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import java.util.Collections
 
 object FavoriteOrderManager {
 
@@ -50,6 +49,7 @@ object FavoriteOrderManager {
                     .setDuration(90)
                     .start()
                 adapter.refreshFavoritesState()
+                onOrderChanged?.invoke()
             }
 
             override fun onMove(
@@ -81,11 +81,11 @@ object FavoriteOrderManager {
                     return false
                 }
 
-                Collections.swap(favoritePackages, fromFavoriteIndex, toFavoriteIndex)
+                val movedPackage = favoritePackages.removeAt(fromFavoriteIndex)
+                favoritePackages.add(toFavoriteIndex, movedPackage)
                 FavoritesManager.replaceFavorites(context, favoritePackages)
 
-                adapter.swapVisibleItems(fromPosition, toPosition)
-                onOrderChanged?.invoke()
+                adapter.moveVisibleItem(fromPosition, toPosition)
 
                 return true
             }

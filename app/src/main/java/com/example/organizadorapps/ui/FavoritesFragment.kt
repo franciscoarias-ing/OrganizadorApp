@@ -42,7 +42,7 @@ class FavoritesFragment : Fragment() {
         filteredApps.addAll(favoriteApps)
 
         val scroll = ScrollView(requireContext()).apply {
-            setBackgroundColor(UiConstants.BACKGROUND)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = true
         }

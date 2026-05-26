@@ -40,7 +40,8 @@ class FavoritesSectionController(
     private val displayLimit: Int,
     private val maxFavorites: Int = UiConstants.MAX_FAVORITES,
     private val closeAfterLaunch: (() -> Unit)? = null,
-    private val bottomMarginDp: Int = 12
+    private val bottomMarginDp: Int = 12,
+    private val onAppLongPress: ((InstalledApp) -> Unit)? = null
 ) {
 
     enum class Mode {
@@ -235,7 +236,8 @@ class FavoritesSectionController(
                 apps = apps,
                 mode = AppAdapter.Mode.FAVORITE,
                 showAddFavorite = false,
-                onAddFavoriteClick = null
+                onAddFavoriteClick = null,
+                onLongPress = onAppLongPress
             )
 
             overScrollMode = RecyclerView.OVER_SCROLL_NEVER
@@ -257,7 +259,8 @@ class FavoritesSectionController(
         return LauncherUiFactory.compactAppRow(
             context = context,
             apps = apps,
-            closeAfterLaunch = closeAfterLaunch
+            closeAfterLaunch = closeAfterLaunch,
+            onAppLongPress = onAppLongPress
         )
     }
 

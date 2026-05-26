@@ -6,7 +6,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import java.util.Collections
 
 class FavoriteEditorAdapter(
     private val allApps: List<InstalledApp>,
@@ -139,17 +138,19 @@ class FavoriteEditorAdapter(
         return visibleApps.getOrNull(position)
     }
 
-    fun swapVisibleItems(fromPosition: Int, toPosition: Int) {
+    fun moveVisibleItem(fromPosition: Int, toPosition: Int) {
         if (
             fromPosition < 0 ||
             toPosition < 0 ||
             fromPosition >= visibleApps.size ||
-            toPosition >= visibleApps.size
+            toPosition >= visibleApps.size ||
+            fromPosition == toPosition
         ) {
             return
         }
 
-        Collections.swap(visibleApps, fromPosition, toPosition)
+        val movedApp = visibleApps.removeAt(fromPosition)
+        visibleApps.add(toPosition, movedApp)
         notifyItemMoved(fromPosition, toPosition)
     }
 

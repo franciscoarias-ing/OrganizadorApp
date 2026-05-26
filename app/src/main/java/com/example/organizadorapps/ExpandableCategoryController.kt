@@ -28,6 +28,7 @@ class ExpandableCategoryController(
     private val folderBottomMarginDp: Int = 12,
     private val folderPreviewIconSizeDp: Int = 22,
     private val panelPreviewIconSizeDp: Int = 20,
+    private val onAppLongPress: ((InstalledApp) -> Unit)? = null,
     private val onAppClick: (InstalledApp) -> Unit
 ) {
 
@@ -207,7 +208,8 @@ class ExpandableCategoryController(
                 tileHeightDp = if (expandedAppsColumns <= 3) UiConstants.COMPACT_SEARCH_GRID_TILE_HEIGHT_DP else 78,
                 horizontalGapDp = if (expandedAppsColumns <= 3) 4 else 8,
                 bottomGapDp = if (expandedAppsColumns <= 3) 4 else 8,
-                closeAfterLaunch = null
+                closeAfterLaunch = null,
+                onAppLongPress = onAppLongPress
             ) { app ->
                 onAppClick(app)
             },

@@ -35,7 +35,7 @@ class CategoryDetailFragment(
         filteredApps.addAll(apps.sortedBy { it.name.lowercase() })
 
         val scroll = ScrollView(requireContext()).apply {
-            setBackgroundColor(UiConstants.BACKGROUND)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = true
         }
