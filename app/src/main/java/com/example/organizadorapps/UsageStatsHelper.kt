@@ -9,6 +9,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
+import com.example.organizadorapps.data.dao.AppUsageSnapshotDao
+import com.example.organizadorapps.data.entity.AppLaunchEntity
+import com.example.organizadorapps.data.entity.AppUsageSnapshotEntity
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -25,6 +28,11 @@ data class RecentUsageEventItem(
     val app: InstalledApp,
     val time: Long,
     val durationMs: Long
+)
+
+data class RecentUsedAppFast(
+    val app: InstalledApp,
+    val lastUsedAt: Long
 )
 
 data class DeviceUsageSummary(
@@ -65,6 +73,61 @@ object UsageStatsHelper {
         context.startActivity(
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }
+
+    fun getRecentUsedAppsFast(
+        context: Context,
+        allApps: List<InstalledApp>,
+        limit: Int = 4,
+        daysBack: Int = 7
+    ): List<RecentUsedAppFast> {
+        if (!hasUsageStatsPermission(context)) return emptyList()
+
+        val period = getPeriodBounds(daysBack)
+        val launchableByPackage = allApps.associateBy { it.packageName }
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val events = usageStatsManager.queryEvents(period.first, period.second)
+        val event = UsageEvents.Event()
+        val latestByPackage = linkedMapOf<String, Long>()
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType != UsageEvents.Event.MOVE_TO_FOREGROUND) continue
+
+            val packageName = event.packageName ?: continue
+            if (packageName == context.packageName) continue
+            if (packageName !in launchableByPackage) continue
+
+            val current = latestByPackage[packageName]
+            if (current == null || event.timeStamp > current) {
+                latestByPackage[packageName] = event.timeStamp
+            }
+        }
+
+        val recentItems = latestByPackage
+            .mapNotNull { (packageName, time) ->
+                val app = launchableByPackage[packageName] ?: return@mapNotNull null
+                RecentUsedAppFast(app = app, lastUsedAt = time)
+            }
+            .sortedByDescending { it.lastUsedAt }
+            .take(limit)
+
+        runCatching {
+            val now = System.currentTimeMillis()
+            AppUsageSnapshotDao(context).upsertSnapshots(
+                recentItems.map { item ->
+                    AppUsageSnapshotEntity(
+                        packageName = item.app.packageName,
+                        appName = item.app.name,
+                        lastUsedAt = item.lastUsedAt,
+                        source = AppLaunchEntity.SOURCE_FROM_SYSTEM,
+                        updatedAt = now
+                    )
+                }
+            )
+        }
+
+        return recentItems
     }
 
     fun buildSummary(context: Context, allApps: List<InstalledApp>, daysBack: Int): DeviceUsageSummary? {

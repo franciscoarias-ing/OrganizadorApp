@@ -42,13 +42,17 @@ class HomeFragment : Fragment() {
     private var lastPermissionState: Boolean? = null
     private var favoritesController: FavoritesSectionController? = null
     private var categoryController: ExpandableCategoryController? = null
+    private var recentAdapter: AppAdapter? = null
+    private var recentRecyclerView: RecyclerView? = null
+    private var recentEmptyView: View? = null
+    private var lastRecentPackages: List<String> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        allApps = AppRepository.getInstalledLaunchableApps(requireContext())
+        allApps = AppRepository.getInstalledLaunchableAppsCached(requireContext())
         lastPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
 
         val recentApps = SmartRecentAppsManager.getRecentApps(
@@ -261,13 +265,11 @@ class HomeFragment : Fragment() {
         super.onResume()
 
         val currentPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
-        if (lastPermissionState != null && lastPermissionState != currentPermissionState) {
-            view?.post {
-                parentFragmentManager.beginTransaction()
-                    .replace(id, HomeFragment())
-                    .commitAllowingStateLoss()
-            }
+        if (lastPermissionState != currentPermissionState) {
+            lastPermissionState = currentPermissionState
         }
+
+        refreshRecentApps()
     }
 
     private fun buildHomeHeader(
@@ -360,39 +362,60 @@ class HomeFragment : Fragment() {
             )
         )
 
-        if (apps.isEmpty()) {
-            root.addView(
-                AppUiUtils.miniEmpty(requireContext(), "Sin apps recientes por ahora.")
-            )
-            return
-        }
+        lastRecentPackages = apps.map { it.packageName }
 
-        root.addView(
-            RecyclerView(requireContext()).apply {
-                layoutManager = LinearLayoutManager(
-                    requireContext(),
-                    LinearLayoutManager.HORIZONTAL,
-                    false
-                )
-                adapter = AppAdapter(
-                    apps = apps,
-                    mode = AppAdapter.Mode.RECENT,
-                    showAddFavorite = false,
-                    onAddFavoriteClick = null,
-                    onLongPress = { app -> showAppActions(app) }
-                )
-                overScrollMode = RecyclerView.OVER_SCROLL_NEVER
-                isNestedScrollingEnabled = false
-                setPadding(0, 0, AppUiUtils.dp(requireContext(), 6), 0)
-                clipToPadding = false
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    AppUiUtils.dp(requireContext(), 72)
-                ).apply {
-                    bottomMargin = AppUiUtils.dp(requireContext(), 12)
-                }
-            }
+        recentEmptyView = AppUiUtils.miniEmpty(requireContext(), "Sin apps recientes por ahora.").apply {
+            visibility = if (apps.isEmpty()) View.VISIBLE else View.GONE
+        }
+        root.addView(recentEmptyView)
+
+        recentAdapter = AppAdapter(
+            apps = apps,
+            mode = AppAdapter.Mode.RECENT,
+            showAddFavorite = false,
+            onAddFavoriteClick = null,
+            onLongPress = { app -> showAppActions(app) }
         )
+
+        recentRecyclerView = RecyclerView(requireContext()).apply {
+            layoutManager = LinearLayoutManager(
+                requireContext(),
+                LinearLayoutManager.HORIZONTAL,
+                false
+            )
+            adapter = recentAdapter
+            overScrollMode = RecyclerView.OVER_SCROLL_NEVER
+            isNestedScrollingEnabled = false
+            setPadding(0, 0, AppUiUtils.dp(requireContext(), 6), 0)
+            clipToPadding = false
+            visibility = if (apps.isEmpty()) View.GONE else View.VISIBLE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                AppUiUtils.dp(requireContext(), 72)
+            ).apply {
+                bottomMargin = AppUiUtils.dp(requireContext(), 12)
+            }
+        }
+        root.addView(recentRecyclerView)
+    }
+
+    private fun refreshRecentApps() {
+        if (!isAdded || recentAdapter == null) return
+
+        val updatedRecentApps = SmartRecentAppsManager.getRecentApps(
+            context = requireContext(),
+            allApps = allApps,
+            limit = 4,
+            daysBack = 7
+        )
+
+        val updatedPackages = updatedRecentApps.map { it.packageName }
+        if (updatedPackages == lastRecentPackages) return
+
+        lastRecentPackages = updatedPackages
+        recentAdapter?.updateApps(updatedRecentApps)
+        recentEmptyView?.visibility = if (updatedRecentApps.isEmpty()) View.VISIBLE else View.GONE
+        recentRecyclerView?.visibility = if (updatedRecentApps.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun addFavoritesSection(root: LinearLayout) {

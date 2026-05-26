@@ -9,7 +9,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
-    private val apps: List<InstalledApp>,
+    private var apps: List<InstalledApp>,
     private val mode: Mode = Mode.DEFAULT,
     private val showAddFavorite: Boolean = false,
     private val onAddFavoriteClick: (() -> Unit)? = null,
@@ -341,6 +341,11 @@ class AppAdapter(
                 setPadding(0, AppUiUtils.dp(context, 12), 0, 0)
             }
         )
+    }
+
+    fun updateApps(newApps: List<InstalledApp>) {
+        apps = newApps
+        notifyDataSetChanged()
     }
 
     override fun getItemCount(): Int {
