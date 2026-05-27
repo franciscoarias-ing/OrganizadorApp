@@ -51,6 +51,23 @@ object QuickSettingsNavigator {
         openAppShortcut(context, "com.google.android.youtube", "YouTube")
     }
 
+
+    fun openChatGPT(context: Context) {
+        openAppShortcut(context, "com.openai.chatgpt", "ChatGPT")
+    }
+
+    fun openGemini(context: Context) {
+        openAppShortcut(context, "com.google.android.apps.bard", "Gemini")
+    }
+
+    fun openNetflix(context: Context) {
+        openAppShortcut(context, "com.netflix.mediaclient", "Netflix")
+    }
+
+    fun openDisney(context: Context) {
+        openAppShortcut(context, "com.disney.disneyplus", "Disney+")
+    }
+
     fun openAppShortcut(context: Context, packageName: String, label: String) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent != null) {

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">OrganizadorApps</string>
+    <string name="fixed_categories_widget_description">Widget folder pequeño por categoría</string>
 </resources>

@@ -66,6 +66,20 @@ class ExpandableCategoryController(
         closePanelThen(null)
     }
 
+    fun openCategory(categoryName: String) {
+        val item = categories.firstOrNull {
+            it.category.name.equals(categoryName, ignoreCase = true)
+        } ?: return
+
+        if (expandedItem == item) return
+
+        if (expandedItem == null) {
+            insertPanelBelowItem(item)
+        } else {
+            closePanelThen(item)
+        }
+    }
+
     private fun buildFolderRows() {
         categories.chunked(columns).forEach { rowItems ->
             val row = LinearLayout(context).apply {

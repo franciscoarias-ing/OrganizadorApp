@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RectF
+import android.view.MotionEvent
 import android.view.View
 import kotlin.math.ceil
 import kotlin.math.max
@@ -56,10 +58,13 @@ class UsageCurveView(context: Context) : View(context) {
 
     private var points: List<UsageCurvePoint> = emptyList()
     private var isDuration: Boolean = true
+    private var selectedIndex: Int? = null
+    private val chartBounds = RectF()
 
     fun setData(newPoints: List<UsageCurvePoint>, durationValues: Boolean = true) {
         points = newPoints
         isDuration = durationValues
+        selectedIndex = null
         invalidate()
     }
 
@@ -70,6 +75,7 @@ class UsageCurveView(context: Context) : View(context) {
         val contentTop = paddingTop + 22f
         val contentRight = width - paddingRight - 16f
         val contentBottom = height - paddingBottom - 42f
+        chartBounds.set(contentLeft, contentTop, contentRight, contentBottom)
 
         if (contentRight <= contentLeft || contentBottom <= contentTop) return
 
@@ -85,6 +91,36 @@ class UsageCurveView(context: Context) : View(context) {
         drawSeries(canvas, points.map { it.previousValue }, maxValue, contentLeft, contentTop, contentRight, contentBottom, previousPaint, drawPoints = false)
         drawSeries(canvas, points.map { it.currentValue }, maxValue, contentLeft, contentTop, contentRight, contentBottom, currentPaint, drawPoints = true)
         drawLastValueLabel(canvas, maxValue, contentLeft, contentTop, contentRight, contentBottom)
+        drawSelectedValue(canvas, maxValue, contentLeft, contentTop, contentRight, contentBottom)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (points.isEmpty() || chartBounds.isEmpty()) return super.onTouchEvent(event)
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                parent?.requestDisallowInterceptTouchEvent(true)
+                selectedIndex = findNearestPointIndex(event.x)
+                invalidate()
+                return true
+            }
+            MotionEvent.ACTION_UP -> {
+                performClick()
+                parent?.requestDisallowInterceptTouchEvent(false)
+                return true
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                return true
+            }
+        }
+
+        return true
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
     }
 
     private fun drawGridAndYAxis(
@@ -189,6 +225,100 @@ class UsageCurveView(context: Context) : View(context) {
         labelPaint.color = UiConstants.TEXT_PRIMARY
         canvas.drawText(label, (x - textWidth - 8f).coerceAtLeast(left), (y - 8f).coerceAtLeast(top + 14f), labelPaint)
         labelPaint.color = UiConstants.TEXT_SECONDARY
+    }
+
+
+    private fun drawSelectedValue(
+        canvas: Canvas,
+        maxValue: Long,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float
+    ) {
+        val index = selectedIndex ?: return
+        if (index !in points.indices) return
+
+        val pointStep = if (points.size <= 1) 0f else (right - left) / (points.size - 1)
+        val point = points[index]
+        val x = left + (pointStep * index)
+
+        canvas.drawLine(x, top, x, bottom, gridPaint)
+
+        drawSelectedPointLabel(
+            canvas = canvas,
+            x = x,
+            y = valueToY(point.currentValue, maxValue, top, bottom),
+            label = "${point.label}: ${formatAxisValue(point.currentValue)}",
+            anchorAbove = true,
+            left = left,
+            right = right
+        )
+
+        if (point.previousValue > 0L) {
+            drawSelectedPointLabel(
+                canvas = canvas,
+                x = x,
+                y = valueToY(point.previousValue, maxValue, top, bottom),
+                label = "Ant.: ${formatAxisValue(point.previousValue)}",
+                anchorAbove = false,
+                left = left,
+                right = right
+            )
+        }
+    }
+
+    private fun drawSelectedPointLabel(
+        canvas: Canvas,
+        x: Float,
+        y: Float,
+        label: String,
+        anchorAbove: Boolean,
+        left: Float,
+        right: Float
+    ) {
+        pointPaint.color = UiConstants.ACCENT
+        canvas.drawCircle(x, y, 6.5f, pointPaint)
+
+        val horizontalPadding = 12f
+        val textWidth = labelPaint.measureText(label)
+        val boxWidth = textWidth + horizontalPadding * 2
+        val boxHeight = 32f
+        val boxLeft = (x - boxWidth / 2f).coerceIn(left, right - boxWidth)
+        val boxTop = if (anchorAbove) {
+            (y - boxHeight - 14f).coerceAtLeast(8f)
+        } else {
+            y + 14f
+        }
+
+        pointPaint.color = Color.argb(236, 15, 23, 42)
+        canvas.drawRoundRect(
+            boxLeft,
+            boxTop,
+            boxLeft + boxWidth,
+            boxTop + boxHeight,
+            12f,
+            12f,
+            pointPaint
+        )
+
+        labelPaint.color = UiConstants.TEXT_PRIMARY
+        canvas.drawText(label, boxLeft + horizontalPadding, boxTop + 22f, labelPaint)
+        labelPaint.color = UiConstants.TEXT_SECONDARY
+    }
+
+    private fun findNearestPointIndex(touchX: Float): Int {
+        if (points.size <= 1) return 0
+
+        val step = chartBounds.width() / (points.size - 1)
+        return ((touchX - chartBounds.left) / step)
+            .toInt()
+            .coerceIn(0, points.lastIndex)
+    }
+
+    private fun valueToY(value: Long, maxValue: Long, top: Float, bottom: Float): Float {
+        val normalized = value.toFloat() / maxValue.toFloat()
+        return bottom - ((bottom - top) * normalized)
     }
 
     private fun calculateDateStep(size: Int): Int {

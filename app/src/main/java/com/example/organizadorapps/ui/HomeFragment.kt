@@ -46,6 +46,12 @@ class HomeFragment : Fragment() {
     private var recentRecyclerView: RecyclerView? = null
     private var recentEmptyView: View? = null
     private var lastRecentPackages: List<String> = emptyList()
+    private var initialCategoryToOpen: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        initialCategoryToOpen = arguments?.getString(ARG_OPEN_CATEGORY)?.takeIf { it.isNotBlank() }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -491,6 +497,10 @@ class HomeFragment : Fragment() {
         }
     }
 
+    fun openCategory(categoryName: String) {
+        categoryController?.openCategory(categoryName)
+    }
+
     private fun showAppActions(app: InstalledApp) {
         AppActionsBottomSheet.show(
             context = requireContext(),
@@ -525,4 +535,19 @@ class HomeFragment : Fragment() {
             requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         inputMethodManager?.hideSoftInputFromWindow(view.windowToken, 0)
     }
+
+    companion object {
+        private const val ARG_OPEN_CATEGORY = "arg_open_category"
+
+        fun newInstance(categoryToOpen: String? = null): HomeFragment {
+            return HomeFragment().apply {
+                arguments = Bundle().apply {
+                    if (!categoryToOpen.isNullOrBlank()) {
+                        putString(ARG_OPEN_CATEGORY, categoryToOpen)
+                    }
+                }
+            }
+        }
+    }
+
 }

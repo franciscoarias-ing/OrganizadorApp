@@ -1,5 +1,6 @@
 package com.example.organizadorapps
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -31,10 +32,12 @@ class MainActivity : AppCompatActivity() {
     private var homeFragment: HomeFragment? = null
     private var usageFragment: UsageFragment? = null
     private var activeFragment: Fragment? = null
+    private var pendingCategoryToOpen: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
+        pendingCategoryToOpen = readCategoryExtra(intent)
 
         WallpaperBackgroundManager.prepareWallpaperWindow(window)
 
@@ -255,10 +258,13 @@ class MainActivity : AppCompatActivity() {
     private fun switchFragment(target: Int) {
         val fragment = when (target) {
             navUsage -> usageFragment ?: UsageFragment().also { usageFragment = it }
-            else -> homeFragment ?: HomeFragment().also { homeFragment = it }
+            else -> homeFragment ?: HomeFragment.newInstance(pendingCategoryToOpen).also { homeFragment = it }
         }
 
-        if (activeFragment === fragment) return
+        if (activeFragment === fragment) {
+            openPendingCategoryOnHome(fragment)
+            return
+        }
 
         supportFragmentManager.beginTransaction()
             .setReorderingAllowed(true)
@@ -273,6 +279,33 @@ class MainActivity : AppCompatActivity() {
             .commit()
 
         activeFragment = fragment
+
+        openPendingCategoryOnHome(fragment)
+    }
+
+    private fun openPendingCategoryOnHome(fragment: Fragment) {
+        if (fragment is HomeFragment) {
+            pendingCategoryToOpen?.let { categoryName ->
+                fragment.view?.post { fragment.openCategory(categoryName) }
+                pendingCategoryToOpen = null
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val categoryName = readCategoryExtra(intent)
+        if (!categoryName.isNullOrBlank()) {
+            pendingCategoryToOpen = categoryName
+            selectNav(navHome)
+            switchFragment(navHome)
+        }
+    }
+
+    private fun readCategoryExtra(intent: Intent?): String? {
+        return intent?.getStringExtra(FixedCategoriesWidgetProvider.EXTRA_CATEGORY_TO_OPEN)
+            ?.takeIf { it.isNotBlank() }
     }
 
     private fun restoreFragmentsAfterRecreation() {

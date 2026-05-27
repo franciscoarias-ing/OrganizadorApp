@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/fixed_categories_widget_description"
+    android:configure="com.example.organizadorapps.CategoryWidgetConfigureActivity"
+    android:initialLayout="@layout/widget_fixed_categories"
+    android:minWidth="110dp"
+    android:minHeight="115dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />
