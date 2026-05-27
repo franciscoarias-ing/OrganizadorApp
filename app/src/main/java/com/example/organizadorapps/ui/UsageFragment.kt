@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.text.TextUtils
@@ -43,6 +45,11 @@ class UsageFragment : Fragment() {
     private var lastPermissionState: Boolean? = null
     private var selectedDaysBack: Int = 1
     private var selectedCurvePackage: String? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val summaryCache = mutableMapOf<Int, DeviceUsageSummary?>()
+    private val curveCache = mutableMapOf<String, UsageCurveResult>()
+    private var summaryRequestId: Int = 0
+    private var curveRequestId: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,7 +66,11 @@ class UsageFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         val currentPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
-        if (lastPermissionState != currentPermissionState) renderUsageContent()
+        if (lastPermissionState != currentPermissionState) {
+            summaryCache.clear()
+            curveCache.clear()
+            renderUsageContent()
+        }
     }
 
     override fun onDestroyView() {
@@ -73,11 +84,6 @@ class UsageFragment : Fragment() {
         lastPermissionState = hasPermission
 
         val allApps = AppRepository.getAppsFast(context)
-        val summary = if (hasPermission) {
-            UsageStatsHelper.buildSummary(context, allApps, selectedDaysBack)
-        } else {
-            null
-        }
 
         val scroll = ScrollView(context).apply {
             setBackgroundColor(Color.TRANSPARENT)
@@ -96,24 +102,95 @@ class UsageFragment : Fragment() {
         }
 
         root.addView(header(context))
-        root.addView(periodSelector(context))
-        root.addView(appUsageCurveSection(context, allApps, summary?.topApp?.app))
-
-        if (summary == null) {
-            root.addView(permissionInfoCard(context))
-            root.addView(permissionMetricsGrid(context))
-            root.addView(permissionSection(context, "Ranking de uso", "Activa el acceso de uso para ver tus apps más usadas, sesiones recientes y tiempo acumulado."))
-            root.addView(permissionSection(context, "Resumen útil", "Con el permiso podremos calcular apps sin uso, tiempo en redes, productividad y patrones de apertura."))
-        } else {
-            root.addView(metricsGrid(context, summary))
-            root.addView(insightStrip(context, summary, allApps.size))
-            root.addView(mostUsedSection(context, summary))
-            root.addView(bottomSummaryGrid(context, summary, allApps.size))
-        }
+        root.addView(appUsageCurveSection(context, allApps, summaryCache[selectedDaysBack]?.topApp?.app))
+        root.addView(deviceSummarySection(context, allApps, hasPermission))
 
         scroll.addView(root)
         containerRoot?.removeAllViews()
         containerRoot?.addView(scroll)
+    }
+
+    private fun deviceSummarySection(
+        context: Context,
+        allApps: List<InstalledApp>,
+        hasPermission: Boolean
+    ): LinearLayout {
+        val contentContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        return sectionCard(context).apply {
+            addView(sectionTitle(context, "Resumen del dispositivo"))
+            addView(TextView(context).apply {
+                text = "Este filtro afecta solo las métricas generales, ranking y actividad reciente. La curva superior siempre usa los últimos 3 meses."
+                textSize = 12.5f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 12))
+            })
+            addView(periodSelector(context))
+            addView(contentContainer)
+
+            if (!hasPermission) {
+                contentContainer.addView(permissionInfoCard(context))
+                contentContainer.addView(permissionMetricsGrid(context))
+                contentContainer.addView(permissionSection(context, "Ranking de uso", "Activa el acceso de uso para ver tus apps más usadas, sesiones recientes y tiempo acumulado."))
+                contentContainer.addView(permissionSection(context, "Resumen útil", "Con el permiso podremos calcular apps sin uso, tiempo en redes, productividad y patrones de apertura."))
+            } else {
+                val cachedSummary = summaryCache[selectedDaysBack]
+                if (cachedSummary != null) {
+                    renderSummaryContent(context, contentContainer, cachedSummary, allApps.size)
+                } else {
+                    contentContainer.addView(loadingText(context, "Calculando métricas de uso..."))
+                    loadSummaryInBackground(context, allApps, contentContainer)
+                }
+            }
+        }
+    }
+
+    private fun loadSummaryInBackground(
+        context: Context,
+        allApps: List<InstalledApp>,
+        contentContainer: LinearLayout
+    ) {
+        val requestId = ++summaryRequestId
+        val days = selectedDaysBack
+        val appContext = context.applicationContext
+        Thread {
+            val summary = UsageStatsHelper.buildSummary(appContext, allApps, days)
+            summaryCache[days] = summary
+            mainHandler.post {
+                if (requestId != summaryRequestId || containerRoot == null) return@post
+                contentContainer.removeAllViews()
+                if (summary == null) {
+                    contentContainer.addView(permissionInfoCard(requireContext()))
+                    contentContainer.addView(permissionMetricsGrid(requireContext()))
+                } else {
+                    renderSummaryContent(requireContext(), contentContainer, summary, allApps.size)
+                }
+            }
+        }.start()
+    }
+
+    private fun renderSummaryContent(
+        context: Context,
+        container: LinearLayout,
+        summary: DeviceUsageSummary,
+        totalApps: Int
+    ) {
+        container.addView(metricsGrid(context, summary))
+        container.addView(insightStrip(context, summary, totalApps))
+        container.addView(mostUsedSection(context, summary))
+        container.addView(bottomSummaryGrid(context, summary, totalApps))
+    }
+
+    private fun loadingText(context: Context, textValue: String): TextView {
+        return TextView(context).apply {
+            text = textValue
+            textSize = 14f
+            setTextColor(UiConstants.TEXT_SECONDARY)
+            gravity = Gravity.CENTER
+            setPadding(0, AppUiUtils.dp(context, 18), 0, AppUiUtils.dp(context, 18))
+        }
     }
 
     private fun header(context: Context): LinearLayout {
@@ -391,7 +468,7 @@ class UsageFragment : Fragment() {
             })
 
             addView(ImageView(context).apply {
-                setImageDrawable(item.app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, item.app))
                 layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 38), AppUiUtils.dp(context, 38)).apply {
                     rightMargin = AppUiUtils.dp(context, 12)
                 }
@@ -492,7 +569,7 @@ class UsageFragment : Fragment() {
             setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 8))
 
             addView(ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
                 layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 34), AppUiUtils.dp(context, 34)).apply {
                     rightMargin = AppUiUtils.dp(context, 10)
                 }
@@ -535,7 +612,7 @@ class UsageFragment : Fragment() {
             setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 8))
 
             addView(ImageView(context).apply {
-                setImageDrawable(item.app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, item.app))
                 layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 34), AppUiUtils.dp(context, 34)).apply {
                     rightMargin = AppUiUtils.dp(context, 10)
                 }
@@ -678,12 +755,8 @@ class UsageFragment : Fragment() {
 
             lateinit var searchBox: EditText
 
-            fun renderCurve(app: InstalledApp) {
-                selectedApp = app
-                selectedCurvePackage = app.packageName
+            fun renderCurveResult(app: InstalledApp, result: UsageCurveResult) {
                 chartContainer.removeAllViews()
-
-                val result = UsageStatsHelper.getLastThreeMonthsCurveForApp(context, app)
                 chartContainer.addView(curveHeader(context, app, result))
 
                 if (result.points.isEmpty()) {
@@ -693,14 +766,40 @@ class UsageFragment : Fragment() {
 
                 chartContainer.addView(UsageCurveView(context).apply {
                     setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 6))
-                    setData(result.points)
+                    setData(result.points, result.isDuration)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        AppUiUtils.dp(context, 190)
+                        AppUiUtils.dp(context, 230)
                     )
                 })
 
                 chartContainer.addView(curveLegend(context, result))
+            }
+
+            fun renderCurve(app: InstalledApp) {
+                selectedApp = app
+                selectedCurvePackage = app.packageName
+                chartContainer.removeAllViews()
+
+                val cacheKey = "${app.packageName}_${UsageStatsHelper.hasUsageStatsPermission(context)}"
+                val cachedResult = curveCache[cacheKey]
+                if (cachedResult != null) {
+                    renderCurveResult(app, cachedResult)
+                    return
+                }
+
+                chartContainer.addView(loadingText(context, "Calculando curva de los últimos 3 meses..."))
+                val requestId = ++curveRequestId
+                val appContext = context.applicationContext
+
+                Thread {
+                    val result = UsageStatsHelper.getLastThreeMonthsCurveForApp(appContext, app)
+                    curveCache[cacheKey] = result
+                    mainHandler.post {
+                        if (requestId != curveRequestId || containerRoot == null) return@post
+                        renderCurveResult(app, result)
+                    }
+                }.start()
             }
 
             fun renderSuggestions(query: String) {
@@ -986,3 +1085,4 @@ class UsageFragment : Fragment() {
         }
     }
 }
+

@@ -30,6 +30,12 @@ object QuickActionsBar {
             addView(button(context, R.drawable.ic_flashlight, "Cambiar linterna", size) {
                 QuickSettingsNavigator.toggleFlashlight(context)
             })
+            addView(button(context, R.drawable.ic_spotify, "Abrir Spotify", size) {
+                QuickSettingsNavigator.openSpotify(context)
+            })
+            addView(button(context, R.drawable.ic_youtube, "Abrir YouTube", size) {
+                QuickSettingsNavigator.openYouTube(context)
+            })
         }
     }
 

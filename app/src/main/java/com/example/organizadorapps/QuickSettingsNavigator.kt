@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.Settings
@@ -41,6 +42,26 @@ object QuickSettingsNavigator {
         open(context, intent, "No se pudo abrir la cámara", fallback)
     }
 
+
+    fun openSpotify(context: Context) {
+        openAppShortcut(context, "com.spotify.music", "Spotify")
+    }
+
+    fun openYouTube(context: Context) {
+        openAppShortcut(context, "com.google.android.youtube", "YouTube")
+    }
+
+    fun openAppShortcut(context: Context, packageName: String, label: String) {
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+        if (launchIntent != null) {
+            open(context, launchIntent, "No se pudo abrir $label")
+            return
+        }
+
+        val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+        open(context, marketIntent, "$label no está instalado", browserIntent)
+    }
     fun toggleFlashlight(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             Toast.makeText(context, "Linterna no compatible con esta versión de Android", Toast.LENGTH_SHORT).show()

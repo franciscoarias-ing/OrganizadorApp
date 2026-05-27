@@ -28,6 +28,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var homeItem: LinearLayout
     private lateinit var usageItem: LinearLayout
 
+    private var homeFragment: HomeFragment? = null
+    private var usageFragment: UsageFragment? = null
+    private var activeFragment: Fragment? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
@@ -81,17 +85,15 @@ class MainActivity : AppCompatActivity() {
             iconRes = R.drawable.ic_nav_home
         ) {
             selectNav(navHome)
-            openFragment(HomeFragment())
+            switchFragment(navHome)
         }
-
-
 
         usageItem = createNavItem(
             title = "Uso",
             iconRes = R.drawable.ic_nav_usage
         ) {
             selectNav(navUsage)
-            openFragment(UsageFragment())
+            switchFragment(navUsage)
         }
 
         bottomBar.addView(homeItem)
@@ -156,7 +158,9 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             selectNav(navHome)
-            openFragment(HomeFragment())
+            switchFragment(navHome)
+        } else {
+            restoreFragmentsAfterRecreation()
         }
     }
 
@@ -248,13 +252,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun openFragment(fragment: Fragment) {
-        val currentFragment = supportFragmentManager.findFragmentById(containerId)
-        if (currentFragment != null && currentFragment::class == fragment::class) return
+    private fun switchFragment(target: Int) {
+        val fragment = when (target) {
+            navUsage -> usageFragment ?: UsageFragment().also { usageFragment = it }
+            else -> homeFragment ?: HomeFragment().also { homeFragment = it }
+        }
+
+        if (activeFragment === fragment) return
 
         supportFragmentManager.beginTransaction()
             .setReorderingAllowed(true)
-            .replace(containerId, fragment, fragment::class.java.simpleName)
+            .apply {
+                activeFragment?.let { hide(it) }
+                if (fragment.isAdded) {
+                    show(fragment)
+                } else {
+                    add(containerId, fragment, fragment::class.java.simpleName)
+                }
+            }
             .commit()
+
+        activeFragment = fragment
+    }
+
+    private fun restoreFragmentsAfterRecreation() {
+        homeFragment = supportFragmentManager.findFragmentByTag(HomeFragment::class.java.simpleName) as? HomeFragment
+        usageFragment = supportFragmentManager.findFragmentByTag(UsageFragment::class.java.simpleName) as? UsageFragment
+        activeFragment = supportFragmentManager.fragments.firstOrNull { !it.isHidden }
+
+        val activeIsUsage = activeFragment is UsageFragment
+        selectNav(if (activeIsUsage) navUsage else navHome)
+
+        if (activeFragment == null) {
+            switchFragment(navHome)
+        }
     }
 }
