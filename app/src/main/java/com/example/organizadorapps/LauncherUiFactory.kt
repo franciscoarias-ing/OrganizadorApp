@@ -266,7 +266,7 @@ object LauncherUiFactory {
 
             addView(
                 ImageView(context).apply {
-                    setImageDrawable(app.icon)
+                    setImageDrawable(IconCacheManager.getIcon(context, app))
                     layoutParams = LinearLayout.LayoutParams(
                         AppUiUtils.dp(context, UiConstants.COMPACT_APP_ICON_SIZE_DP),
                         AppUiUtils.dp(context, UiConstants.COMPACT_APP_ICON_SIZE_DP)
@@ -335,7 +335,7 @@ object LauncherUiFactory {
         apps.take(4).forEach { app ->
             grid.addView(
                 ImageView(context).apply {
-                    setImageDrawable(app.icon)
+                    setImageDrawable(IconCacheManager.getIcon(context, app))
                     scaleType = ImageView.ScaleType.FIT_CENTER
                     layoutParams = ViewGroup.MarginLayoutParams(
                         AppUiUtils.dp(context, iconSizeDp),
@@ -481,7 +481,7 @@ object LauncherUiFactory {
 
             addView(
                 ImageView(context).apply {
-                    setImageDrawable(app.icon)
+                    setImageDrawable(IconCacheManager.getIcon(context, app))
                     layoutParams = LinearLayout.LayoutParams(
                         AppUiUtils.dp(context, iconSizeDp),
                         AppUiUtils.dp(context, iconSizeDp)

@@ -3,51 +3,31 @@ package com.example.organizadorapps
 object CategorySuggestionEngine {
 
     fun categorizeApps(apps: List<InstalledApp>): List<AppCategory> {
+        val matchedPackages = mutableSetOf<String>()
 
-        val categoryMap = linkedMapOf(
-            "Social" to listOf("whatsapp", "telegram", "instagram", "facebook", "messenger", "discord"),
-            "Google" to listOf("google", "gmail", "maps", "youtube", "drive"),
-            "Multimedia" to listOf("spotify", "netflix", "music", "video", "vlc"),
-            "Compras" to listOf("amazon", "mercado", "shop", "aliexpress", "temu"),
-            "Herramientas" to listOf("files", "calculator", "drive", "settings"),
-            "Productividad" to listOf("notion", "keep", "office", "word", "excel", "docs"),
-            "Educación" to listOf("classroom", "coursera", "udemy", "duolingo"),
-            "Finanzas" to listOf("bcp", "yape", "plin", "paypal", "binance"),
-            "Transporte" to listOf("uber", "didi", "cabify", "indrive"),
-            "Juegos" to listOf("game", "roblox", "minecraft", "clash")
-        )
+        val categories = CategoryRules.rules.map { (categoryName, keywords) ->
+            val matchedApps = apps
+                .filter { app -> app.matchesAnyKeyword(keywords) }
+                .distinctBy { it.packageName }
+                .sortedBy { it.name.lowercase() }
 
-        val categorizedPackages = mutableSetOf<String>()
-
-        val categories = categoryMap.map { (categoryName, keywords) ->
-
-            val matchedApps = apps.filter { app ->
-
-                val searchable =
-                    "${app.name} ${app.packageName}".lowercase()
-
-                val matches = keywords.any { keyword ->
-                    searchable.contains(keyword)
-                }
-
-                if (matches) {
-                    categorizedPackages.add(app.packageName)
-                }
-
-                matches
-            }
-
+            matchedPackages.addAll(matchedApps.map { it.packageName })
             AppCategory(categoryName, matchedApps)
         }.toMutableList()
 
-        val others = apps.filterNot {
-            categorizedPackages.contains(it.packageName)
-        }
+        val others = apps
+            .filterNot { it.packageName in matchedPackages }
+            .sortedBy { it.name.lowercase() }
 
-        categories.add(
-            AppCategory("Otros", others)
-        )
-
+        categories.add(AppCategory("Otros", others))
         return categories
+    }
+
+    private fun InstalledApp.matchesAnyKeyword(keywords: List<String>): Boolean {
+        val searchable = "${name} ${packageName}".lowercase()
+        return keywords.any { keyword ->
+            val normalized = keyword.lowercase().trim()
+            normalized.isNotBlank() && searchable.contains(normalized)
+        }
     }
 }

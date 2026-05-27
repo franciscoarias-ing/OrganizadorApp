@@ -52,7 +52,7 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        allApps = AppRepository.getInstalledLaunchableAppsCached(requireContext())
+        allApps = AppRepository.getAppsFast(requireContext())
         lastPermissionState = UsageStatsHelper.hasUsageStatsPermission(requireContext())
 
         val recentApps = SmartRecentAppsManager.getRecentApps(
@@ -258,6 +258,7 @@ class HomeFragment : Fragment() {
         addCategorySection(normalContent, categories)
 
         scroll.addView(root)
+        refreshAppsInBackground()
         return scroll
     }
 
@@ -349,6 +350,22 @@ class HomeFragment : Fragment() {
                     addView(headerPill("Ocultas", onShowHiddenApps))
                 }
             )
+        }
+    }
+
+    private fun refreshAppsInBackground() {
+        AppRepository.refreshAppsInBackground(requireContext()) callback@{ updatedApps ->
+            if (!isAdded) return@callback
+
+            val oldPackages = allApps.map { it.packageName }
+            val newPackages = updatedApps.map { it.packageName }
+            if (oldPackages == newPackages) return@callback
+
+            allApps = updatedApps
+            refreshRecentApps()
+            favoritesController?.refresh()
+            // Las categorías se recalculan al volver a crear Home. Evitamos reconstruir el fragment
+            // automáticamente para no generar parpadeos ni cerrar paneles abiertos del usuario.
         }
     }
 

@@ -54,7 +54,7 @@ class ExpandedAppsAdapter(
 
         holder.root.addView(
             ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
 
                 layoutParams = LinearLayout.LayoutParams(
                     AppUiUtils.dp(context, 34),

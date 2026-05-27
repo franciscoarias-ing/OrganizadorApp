@@ -107,7 +107,7 @@ class CategoryFolderAdapter(
             val iconSize = AppUiUtils.dp(context, 22)
 
             val icon = ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
                 scaleType = ImageView.ScaleType.FIT_CENTER
 
                 layoutParams = ViewGroup.MarginLayoutParams(
@@ -157,7 +157,7 @@ class CategoryFolderAdapter(
             val iconSize = AppUiUtils.dp(context, 20)
 
             val icon = ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
                 scaleType = ImageView.ScaleType.FIT_CENTER
 
                 layoutParams = ViewGroup.MarginLayoutParams(

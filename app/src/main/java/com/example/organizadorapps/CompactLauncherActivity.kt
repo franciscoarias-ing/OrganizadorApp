@@ -95,7 +95,7 @@ class CompactLauncherActivity : AppCompatActivity() {
 
     private fun renderContent() {
         lastPermissionState = UsageStatsHelper.hasUsageStatsPermission(this)
-        allApps = AppRepository.getInstalledLaunchableApps(this)
+        allApps = AppRepository.getAppsFast(this)
 
         val scroll = ScrollView(this).apply {
             setBackgroundColor(Color.TRANSPARENT)
@@ -137,6 +137,20 @@ class CompactLauncherActivity : AppCompatActivity() {
         rootContainer.addView(scroll, scrollParams)
 
         renderNormalContent()
+        refreshAppsInBackground()
+    }
+
+    private fun refreshAppsInBackground() {
+        AppRepository.refreshAppsInBackground(this) callback@{ updatedApps ->
+            val oldPackages = allApps.map { it.packageName }
+            val newPackages = updatedApps.map { it.packageName }
+            if (oldPackages == newPackages) return@callback
+
+            allApps = updatedApps
+            if (searchController == null && ::floatingCard.isInitialized) {
+                renderNormalContent()
+            }
+        }
     }
 
     private fun renderNormalContent() {

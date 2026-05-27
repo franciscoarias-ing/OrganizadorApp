@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
@@ -183,7 +184,7 @@ class AppAdapter(
 
         iconContainer.addView(
             ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
                 layoutParams = LinearLayout.LayoutParams(
                     AppUiUtils.dp(context, 30),
                     AppUiUtils.dp(context, 30)
@@ -233,7 +234,7 @@ class AppAdapter(
 
         holder.container.addView(
             ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
 
                 layoutParams = LinearLayout.LayoutParams(
                     AppUiUtils.dp(context, 36),
@@ -319,7 +320,7 @@ class AppAdapter(
 
         holder.container.addView(
             ImageView(context).apply {
-                setImageDrawable(app.icon)
+                setImageDrawable(IconCacheManager.getIcon(context, app))
 
                 layoutParams = LinearLayout.LayoutParams(
                     AppUiUtils.dp(context, 54),
@@ -344,8 +345,9 @@ class AppAdapter(
     }
 
     fun updateApps(newApps: List<InstalledApp>) {
+        val diffResult = DiffUtil.calculateDiff(AppDiffCallback(apps, newApps))
         apps = newApps
-        notifyDataSetChanged()
+        diffResult.dispatchUpdatesTo(this)
     }
 
     override fun getItemCount(): Int {
