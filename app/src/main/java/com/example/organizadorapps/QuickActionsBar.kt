@@ -24,6 +24,12 @@ object QuickActionsBar {
             addView(button(context, R.drawable.ic_mobile_data, "Abrir datos móviles", size) {
                 QuickSettingsNavigator.openMobileData(context)
             })
+            addView(button(context, R.drawable.ic_camera, "Abrir cámara", size) {
+                QuickSettingsNavigator.openCamera(context)
+            })
+            addView(button(context, R.drawable.ic_flashlight, "Cambiar linterna", size) {
+                QuickSettingsNavigator.toggleFlashlight(context)
+            })
         }
     }
 

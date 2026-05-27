@@ -166,12 +166,12 @@ class CompactLauncherActivity : AppCompatActivity() {
         val recentApps = SmartRecentAppsManager.getRecentApps(
             context = this,
             allApps = allApps,
-            limit = 4,
+            limit = UiConstants.HOME_RECENT_LIMIT,
             daysBack = 7
         )
 
         val categories = CategorySuggestionEngine
-            .categorizeApps(allApps)
+            .categorizeApps(allApps, this)
             .filter { it.apps.isNotEmpty() }
             .map { category ->
                 ExpandableCategoryItem(

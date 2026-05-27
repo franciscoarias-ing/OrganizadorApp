@@ -58,12 +58,12 @@ class HomeFragment : Fragment() {
         val recentApps = SmartRecentAppsManager.getRecentApps(
             context = requireContext(),
             allApps = allApps,
-            limit = 4,
+            limit = UiConstants.HOME_RECENT_LIMIT,
             daysBack = 7
         )
 
         val categories = CategorySuggestionEngine
-            .categorizeApps(allApps)
+            .categorizeApps(allApps, requireContext())
             .filter { it.apps.isNotEmpty() }
             .map { category -> ExpandableCategoryItem(category = category, isExpanded = false) }
             .toMutableList()
@@ -408,7 +408,7 @@ class HomeFragment : Fragment() {
             visibility = if (apps.isEmpty()) View.GONE else View.VISIBLE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(requireContext(), 72)
+                AppUiUtils.dp(requireContext(), UiConstants.HOME_RECENT_TILE_HEIGHT_DP + 4)
             ).apply {
                 bottomMargin = AppUiUtils.dp(requireContext(), 12)
             }
@@ -422,7 +422,7 @@ class HomeFragment : Fragment() {
         val updatedRecentApps = SmartRecentAppsManager.getRecentApps(
             context = requireContext(),
             allApps = allApps,
-            limit = 4,
+            limit = UiConstants.HOME_RECENT_LIMIT,
             daysBack = 7
         )
 

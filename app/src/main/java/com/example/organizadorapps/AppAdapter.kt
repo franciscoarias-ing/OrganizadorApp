@@ -69,19 +69,19 @@ class AppAdapter(
 
             mode == Mode.RECENT -> {
                 LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
                     background = AppUiUtils.roundedCard()
                     setPadding(
-                        AppUiUtils.dp(context, 9),
-                        AppUiUtils.dp(context, 7),
-                        AppUiUtils.dp(context, 9),
-                        AppUiUtils.dp(context, 7)
+                        AppUiUtils.dp(context, 6),
+                        AppUiUtils.dp(context, 6),
+                        AppUiUtils.dp(context, 6),
+                        AppUiUtils.dp(context, 5)
                     )
 
                     layoutParams = RecyclerView.LayoutParams(
-                        AppUiUtils.dp(context, 130),
-                        AppUiUtils.dp(context, 64)
+                        AppUiUtils.dp(context, UiConstants.HOME_RECENT_TILE_WIDTH_DP),
+                        AppUiUtils.dp(context, UiConstants.HOME_RECENT_TILE_HEIGHT_DP)
                     ).apply {
                         marginEnd = AppUiUtils.dp(context, 8)
                     }
@@ -101,10 +101,10 @@ class AppAdapter(
                     )
 
                     layoutParams = RecyclerView.LayoutParams(
-                        AppUiUtils.dp(context, 82),
-                        AppUiUtils.dp(context, 72)
+                        AppUiUtils.dp(context, UiConstants.HOME_FAVORITE_TILE_WIDTH_DP),
+                        AppUiUtils.dp(context, UiConstants.HOME_FAVORITE_TILE_HEIGHT_DP)
                     ).apply {
-                        marginEnd = AppUiUtils.dp(context, 8)
+                        marginEnd = AppUiUtils.dp(context, UiConstants.HOME_FAVORITE_MARGIN_END_DP)
                     }
                 }
             }
@@ -177,78 +177,29 @@ class AppAdapter(
             background = AppUiUtils.appIconTile(context)
 
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 44),
-                AppUiUtils.dp(context, 44)
-            )
+                AppUiUtils.dp(context, UiConstants.HOME_RECENT_ICON_TILE_DP),
+                AppUiUtils.dp(context, UiConstants.HOME_RECENT_ICON_TILE_DP)
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
         }
 
         iconContainer.addView(
             ImageView(context).apply {
                 setImageDrawable(IconCacheManager.getIcon(context, app))
                 layoutParams = LinearLayout.LayoutParams(
-                    AppUiUtils.dp(context, 30),
-                    AppUiUtils.dp(context, 30)
+                    AppUiUtils.dp(context, UiConstants.HOME_RECENT_ICON_SIZE_DP),
+                    AppUiUtils.dp(context, UiConstants.HOME_RECENT_ICON_SIZE_DP)
                 )
             }
         )
 
-        val textColumn = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(AppUiUtils.dp(context, 12), 0, 0, 0)
-
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
-            )
-        }
-
-        textColumn.addView(
-            TextView(context).apply {
-                text = app.name
-                textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(UiConstants.TEXT_PRIMARY)
-                maxLines = 1
-                includeFontPadding = false
-            }
-        )
-
-        textColumn.addView(
-            TextView(context).apply {
-                text = RecentAppsManager.getRecentTimeLabel(context, app.packageName)
-                textSize = 10f
-                setTextColor(UiConstants.TEXT_SECONDARY)
-                maxLines = 1
-                includeFontPadding = false
-                setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
-            }
-        )
-
         holder.container.addView(iconContainer)
-        holder.container.addView(textColumn)
-    }
-
-    private fun bindFavorite(holder: AppViewHolder, app: InstalledApp) {
-        val context = holder.container.context
-
-        holder.container.addView(
-            ImageView(context).apply {
-                setImageDrawable(IconCacheManager.getIcon(context, app))
-
-                layoutParams = LinearLayout.LayoutParams(
-                    AppUiUtils.dp(context, 36),
-                    AppUiUtils.dp(context, 36)
-                ).apply {
-                    gravity = Gravity.CENTER_HORIZONTAL
-                }
-            }
-        )
 
         holder.container.addView(
             TextView(context).apply {
                 text = app.name
-                textSize = 10.5f
+                textSize = 9.5f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 setTextColor(UiConstants.TEXT_PRIMARY)
@@ -259,7 +210,61 @@ class AppAdapter(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = AppUiUtils.dp(context, 6)
+                    topMargin = AppUiUtils.dp(context, 5)
+                }
+            }
+        )
+
+        holder.container.addView(
+            TextView(context).apply {
+                text = RecentAppsManager.getRecentTimeLabel(context, app.packageName)
+                textSize = 8.5f
+                gravity = Gravity.CENTER
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                maxLines = 1
+                includeFontPadding = false
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = AppUiUtils.dp(context, 3)
+                }
+            }
+        )
+    }
+
+    private fun bindFavorite(holder: AppViewHolder, app: InstalledApp) {
+        val context = holder.container.context
+
+        holder.container.addView(
+            ImageView(context).apply {
+                setImageDrawable(IconCacheManager.getIcon(context, app))
+
+                layoutParams = LinearLayout.LayoutParams(
+                    AppUiUtils.dp(context, UiConstants.HOME_FAVORITE_ICON_SIZE_DP),
+                    AppUiUtils.dp(context, UiConstants.HOME_FAVORITE_ICON_SIZE_DP)
+                ).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+            }
+        )
+
+        holder.container.addView(
+            TextView(context).apply {
+                text = app.name
+                textSize = UiConstants.HOME_FAVORITE_TEXT_SIZE_SP
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                maxLines = 1
+                includeFontPadding = false
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = AppUiUtils.dp(context, 4)
                 }
             }
         )
@@ -273,8 +278,8 @@ class AppAdapter(
             background = AppUiUtils.addFavoriteCard(context)
 
             layoutParams = LinearLayout.LayoutParams(
-                AppUiUtils.dp(context, 78),
-                AppUiUtils.dp(context, 78)
+                AppUiUtils.dp(context, 62),
+                AppUiUtils.dp(context, 62)
             )
         }
 
@@ -283,10 +288,10 @@ class AppAdapter(
                 setImageResource(R.drawable.ic_add)
                 setColorFilter(UiConstants.ACCENT)
                 setPadding(
-                    AppUiUtils.dp(context, 18),
-                    AppUiUtils.dp(context, 18),
-                    AppUiUtils.dp(context, 18),
-                    AppUiUtils.dp(context, 18)
+                    AppUiUtils.dp(context, 14),
+                    AppUiUtils.dp(context, 14),
+                    AppUiUtils.dp(context, 14),
+                    AppUiUtils.dp(context, 14)
                 )
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,

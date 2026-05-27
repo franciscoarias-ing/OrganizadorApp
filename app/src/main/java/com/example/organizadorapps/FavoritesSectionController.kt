@@ -248,7 +248,7 @@ class FavoritesSectionController(
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                AppUiUtils.dp(context, 76)
+                AppUiUtils.dp(context, UiConstants.HOME_FAVORITE_TILE_HEIGHT_DP + 8)
             ).apply {
                 bottomMargin = AppUiUtils.dp(context, 12)
             }

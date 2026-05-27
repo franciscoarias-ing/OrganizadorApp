@@ -60,5 +60,18 @@ object UiConstants {
     const val PANEL_CLOSE_DURATION_MS = 180L
 
     // Favorites
+    const val HOME_FAVORITE_TILE_WIDTH_DP = 70
+    const val HOME_FAVORITE_TILE_HEIGHT_DP = 62
+    const val HOME_FAVORITE_ICON_SIZE_DP = 30
+    const val HOME_FAVORITE_TEXT_SIZE_SP = 9f
+    const val HOME_FAVORITE_MARGIN_END_DP = 7
+
+    // Recent apps
+    const val HOME_RECENT_TILE_WIDTH_DP = 74
+    const val HOME_RECENT_TILE_HEIGHT_DP = 82
+    const val HOME_RECENT_ICON_TILE_DP = 42
+    const val HOME_RECENT_ICON_SIZE_DP = 29
+    const val HOME_RECENT_LIMIT = 6
+
     const val MAX_FAVORITES = 8
 }

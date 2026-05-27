@@ -5,11 +5,14 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -21,12 +24,16 @@ import com.example.organizadorapps.AppRepository
 import com.example.organizadorapps.AppUiUtils
 import com.example.organizadorapps.DeviceUsageApp
 import com.example.organizadorapps.DeviceUsageSummary
+import com.example.organizadorapps.IconCacheManager
+import com.example.organizadorapps.InstalledApp
 import com.example.organizadorapps.QuickActionsBar
 import com.example.organizadorapps.R
 import com.example.organizadorapps.RecentAppsManager
 import com.example.organizadorapps.RecentUsageEventItem
 import com.example.organizadorapps.UiConstants
 import com.example.organizadorapps.UsageStatsHelper
+import com.example.organizadorapps.UsageCurveResult
+import com.example.organizadorapps.UsageCurveView
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -35,6 +42,7 @@ class UsageFragment : Fragment() {
     private var containerRoot: FrameLayout? = null
     private var lastPermissionState: Boolean? = null
     private var selectedDaysBack: Int = 1
+    private var selectedCurvePackage: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,7 +72,7 @@ class UsageFragment : Fragment() {
         val hasPermission = UsageStatsHelper.hasUsageStatsPermission(context)
         lastPermissionState = hasPermission
 
-        val allApps = AppRepository.getInstalledLaunchableApps(context)
+        val allApps = AppRepository.getAppsFast(context)
         val summary = if (hasPermission) {
             UsageStatsHelper.buildSummary(context, allApps, selectedDaysBack)
         } else {
@@ -89,6 +97,7 @@ class UsageFragment : Fragment() {
 
         root.addView(header(context))
         root.addView(periodSelector(context))
+        root.addView(appUsageCurveSection(context, allApps, summary?.topApp?.app))
 
         if (summary == null) {
             root.addView(permissionInfoCard(context))
@@ -450,7 +459,7 @@ class UsageFragment : Fragment() {
     }
 
 
-    private fun unusedAppsCard(context: Context, unusedApps: List<com.example.organizadorapps.InstalledApp>): LinearLayout {
+    private fun unusedAppsCard(context: Context, unusedApps: List<InstalledApp>): LinearLayout {
         return sectionCard(context).apply {
             addView(sectionHeader(context, "Apps sin uso", "Revisar"))
             if (unusedApps.isEmpty()) {
@@ -470,7 +479,7 @@ class UsageFragment : Fragment() {
         }
     }
 
-    private fun unusedAppRow(context: Context, app: com.example.organizadorapps.InstalledApp): LinearLayout {
+    private fun unusedAppRow(context: Context, app: InstalledApp): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -627,6 +636,256 @@ class UsageFragment : Fragment() {
             setTextColor(UiConstants.TEXT_PRIMARY)
             includeFontPadding = false
         }
+    }
+
+
+    private fun appUsageCurveSection(
+        context: Context,
+        allApps: List<InstalledApp>,
+        suggestedApp: InstalledApp?
+    ): LinearLayout {
+        val sortedApps = allApps.sortedBy { it.name.lowercase() }
+        val selectedInitial = selectedCurvePackage
+            ?.let { packageName -> sortedApps.firstOrNull { it.packageName == packageName } }
+            ?: suggestedApp
+            ?: sortedApps.firstOrNull()
+
+        return sectionCard(context).apply {
+            addView(sectionTitle(context, "Uso por aplicación"))
+            addView(TextView(context).apply {
+                text = "Curva de los últimos 3 meses. Si no hay permiso de uso, se usa el historial de aperturas desde el organizador."
+                textSize = 13f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 12))
+            })
+
+            if (sortedApps.isEmpty()) {
+                addView(emptyText(context, "No hay apps disponibles para graficar."))
+                return@apply
+            }
+
+            val suggestionsContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            val chartContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, AppUiUtils.dp(context, 10), 0, 0)
+            }
+
+            var selectedApp = selectedInitial ?: sortedApps.first()
+            selectedCurvePackage = selectedApp.packageName
+
+            lateinit var searchBox: EditText
+
+            fun renderCurve(app: InstalledApp) {
+                selectedApp = app
+                selectedCurvePackage = app.packageName
+                chartContainer.removeAllViews()
+
+                val result = UsageStatsHelper.getLastThreeMonthsCurveForApp(context, app)
+                chartContainer.addView(curveHeader(context, app, result))
+
+                if (result.points.isEmpty()) {
+                    chartContainer.addView(emptyText(context, "Sin datos suficientes para esta app. La curva se irá formando con el uso."))
+                    return
+                }
+
+                chartContainer.addView(UsageCurveView(context).apply {
+                    setPadding(0, AppUiUtils.dp(context, 8), 0, AppUiUtils.dp(context, 6))
+                    setData(result.points)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        AppUiUtils.dp(context, 190)
+                    )
+                })
+
+                chartContainer.addView(curveLegend(context, result))
+            }
+
+            fun renderSuggestions(query: String) {
+                suggestionsContainer.removeAllViews()
+
+                val cleanQuery = query.trim()
+                val filtered = sortedApps
+                    .filter {
+                        cleanQuery.isBlank() ||
+                                it.name.contains(cleanQuery, ignoreCase = true) ||
+                                it.packageName.contains(cleanQuery, ignoreCase = true)
+                    }
+                    .take(5)
+
+                if (filtered.isEmpty()) {
+                    suggestionsContainer.addView(emptyText(context, "No se encontraron apps."))
+                    return
+                }
+
+                filtered.forEach { app ->
+                    suggestionsContainer.addView(appSearchRow(context, app, app.packageName == selectedApp.packageName) {
+                        searchBox.setText(app.name)
+                        searchBox.setSelection(searchBox.text.length)
+                        renderCurve(app)
+                        suggestionsContainer.removeAllViews()
+                        suggestionsContainer.addView(appSearchRow(context, app, true) {})
+                    })
+                }
+            }
+
+            searchBox = EditText(context).apply {
+                hint = "Buscar app para graficar..."
+                textSize = 14f
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                setHintTextColor(UiConstants.TEXT_MUTED)
+                isSingleLine = true
+                background = rounded(context, Color.argb(172, 15, 23, 42), 18, Color.argb(120, 71, 85, 105))
+                setPadding(AppUiUtils.dp(context, 14), 0, AppUiUtils.dp(context, 14), 0)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    AppUiUtils.dp(context, 46)
+                ).apply {
+                    bottomMargin = AppUiUtils.dp(context, 10)
+                }
+                setText(selectedApp.name)
+                setSelection(text.length)
+                addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        renderSuggestions(s?.toString().orEmpty())
+                    }
+                    override fun afterTextChanged(s: Editable?) {}
+                })
+            }
+
+            addView(searchBox)
+            addView(suggestionsContainer)
+            addView(chartContainer)
+
+            renderSuggestions(selectedApp.name)
+            renderCurve(selectedApp)
+        }
+    }
+
+    private fun appSearchRow(
+        context: Context,
+        app: InstalledApp,
+        isSelected: Boolean,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            background = if (isSelected) {
+                rounded(context, Color.argb(90, 168, 85, 247), 16, Color.argb(120, 168, 85, 247))
+            } else {
+                null
+            }
+            setPadding(AppUiUtils.dp(context, 8), AppUiUtils.dp(context, 7), AppUiUtils.dp(context, 8), AppUiUtils.dp(context, 7))
+            setOnClickListener { onClick() }
+
+            addView(ImageView(context).apply {
+                setImageDrawable(IconCacheManager.getIcon(context, app))
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 30), AppUiUtils.dp(context, 30)).apply {
+                    rightMargin = AppUiUtils.dp(context, 10)
+                }
+            })
+
+            addView(TextView(context).apply {
+                text = app.name
+                textSize = 13f
+                setTextColor(if (isSelected) UiConstants.TEXT_PRIMARY else UiConstants.TEXT_SECONDARY)
+                typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+        }
+    }
+
+    private fun curveHeader(context: Context, app: InstalledApp, result: UsageCurveResult): LinearLayout {
+        val current = formatCurveValue(result.currentTotal, result.isDuration)
+        val previous = if (result.hasPrevious) formatCurveValue(result.previousTotal, result.isDuration) else "Sin comparativo"
+        val variation = if (result.hasPrevious) {
+            val delta = ((result.currentTotal - result.previousTotal).toDouble() / result.previousTotal.toDouble() * 100.0).toInt()
+            val sign = if (delta >= 0) "+" else ""
+            "$sign$delta%"
+        } else {
+            "N/D"
+        }
+
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, AppUiUtils.dp(context, 4), 0, AppUiUtils.dp(context, 4))
+
+            addView(TextView(context).apply {
+                text = app.name
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(UiConstants.TEXT_PRIMARY)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+            })
+
+            addView(TextView(context).apply {
+                text = "${result.valueLabel}: $current · Anterior: $previous · Var: $variation"
+                textSize = 12f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 6), 0, 0)
+            })
+
+            addView(TextView(context).apply {
+                text = result.sourceLabel
+                textSize = 11f
+                setTextColor(UiConstants.ACCENT)
+                includeFontPadding = false
+                setPadding(0, AppUiUtils.dp(context, 5), 0, 0)
+            })
+        }
+    }
+
+    private fun curveLegend(context: Context, result: UsageCurveResult): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, AppUiUtils.dp(context, 4), 0, 0)
+
+            addView(legendDot(context, UiConstants.ACCENT, "Últimos 3 meses"))
+            addView(legendDot(context, Color.parseColor("#38BDF8"), "Periodo anterior"))
+        }
+    }
+
+    private fun legendDot(context: Context, color: Int, label: String): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+
+            addView(View(context).apply {
+                background = circle(context, color)
+                layoutParams = LinearLayout.LayoutParams(AppUiUtils.dp(context, 9), AppUiUtils.dp(context, 9)).apply {
+                    rightMargin = AppUiUtils.dp(context, 6)
+                }
+            })
+
+            addView(TextView(context).apply {
+                text = label
+                textSize = 11f
+                setTextColor(UiConstants.TEXT_SECONDARY)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                includeFontPadding = false
+            })
+        }
+    }
+
+    private fun formatCurveValue(value: Long, isDuration: Boolean): String {
+        return if (isDuration) UsageStatsHelper.formatDuration(value) else "$value aperturas"
     }
 
     private fun permissionSection(context: Context, title: String, message: String): LinearLayout {

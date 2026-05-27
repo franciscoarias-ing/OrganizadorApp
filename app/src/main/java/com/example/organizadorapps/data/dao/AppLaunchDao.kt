@@ -4,6 +4,9 @@ import android.content.ContentValues
 import android.content.Context
 import com.example.organizadorapps.data.LocalAppDatabase
 import com.example.organizadorapps.data.entity.AppLaunchEntity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class AppLaunchDao(context: Context) {
 
@@ -18,7 +21,7 @@ class AppLaunchDao(context: Context) {
             put("source", source)
         }
         db.insert("app_launch_history", null, values)
-        trimHistory(maxRows = 80)
+        trimHistory(maxRows = 2000)
     }
 
     fun getRecentPackages(limit: Int): List<String> {
@@ -60,6 +63,31 @@ class AppLaunchDao(context: Context) {
         }
     }
 
+
+    fun getDailyLaunchCounts(packageName: String, startMillis: Long, endMillis: Long): Map<String, Long> {
+        val db = database.readableDatabase
+        val result = linkedMapOf<String, Long>()
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+        db.rawQuery(
+            """
+            SELECT opened_at
+            FROM app_launch_history
+            WHERE package_name = ?
+              AND opened_at BETWEEN ? AND ?
+            ORDER BY opened_at ASC
+            """.trimIndent(),
+            arrayOf(packageName, startMillis.toString(), endMillis.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val day = formatter.format(Date(cursor.getLong(0)))
+                result[day] = (result[day] ?: 0L) + 1L
+            }
+        }
+
+        return result
+    }
+
     fun migrateLegacyLaunches(items: List<AppLaunchEntity>) {
         if (items.isEmpty()) return
         val db = database.writableDatabase
@@ -78,7 +106,7 @@ class AppLaunchDao(context: Context) {
         } finally {
             db.endTransaction()
         }
-        trimHistory(maxRows = 80)
+        trimHistory(maxRows = 2000)
     }
 
     private fun trimHistory(maxRows: Int) {

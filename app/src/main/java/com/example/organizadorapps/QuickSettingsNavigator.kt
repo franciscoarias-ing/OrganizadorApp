@@ -1,12 +1,20 @@
 package com.example.organizadorapps
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.os.Build
+import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
 
 object QuickSettingsNavigator {
+
+    private var isFlashlightOn: Boolean = false
+    private var activeTorchCameraId: String? = null
 
     fun openWifi(context: Context) {
         open(context, Intent(Settings.ACTION_WIFI_SETTINGS), "No se pudo abrir Wi‑Fi")
@@ -27,24 +35,69 @@ object QuickSettingsNavigator {
         open(context, intent, "No se pudo abrir Datos móviles", fallback)
     }
 
+    fun openCamera(context: Context) {
+        val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+        val fallback = context.packageManager.getLaunchIntentForPackage("com.google.android.GoogleCamera")
+        open(context, intent, "No se pudo abrir la cámara", fallback)
+    }
+
+    fun toggleFlashlight(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            Toast.makeText(context, "Linterna no compatible con esta versión de Android", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (context.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(context, "Concede permiso de cámara para usar la linterna", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        runCatching {
+            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = activeTorchCameraId ?: findBackCameraWithFlash(cameraManager)
+            if (cameraId == null) {
+                Toast.makeText(context, "No se encontró una linterna disponible", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val nextState = !isFlashlightOn
+            cameraManager.setTorchMode(cameraId, nextState)
+            activeTorchCameraId = cameraId
+            isFlashlightOn = nextState
+        }.onFailure {
+            Toast.makeText(context, "No se pudo cambiar la linterna", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun findBackCameraWithFlash(cameraManager: CameraManager): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
+
+        return cameraManager.cameraIdList.firstOrNull { id ->
+            val characteristics = cameraManager.getCameraCharacteristics(id)
+            val hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            val lensFacing = characteristics.get(CameraCharacteristics.LENS_FACING)
+            hasFlash && lensFacing == CameraCharacteristics.LENS_FACING_BACK
+        }
+    }
+
     private fun open(
         context: Context,
         intent: Intent,
         errorMessage: String,
         fallback: Intent? = null
     ) {
-        try {
+        runCatching {
             context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (_: Exception) {
+        }.onFailure {
             if (fallback != null) {
-                try {
+                runCatching {
                     context.startActivity(fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    return
-                } catch (_: Exception) {
-                    // ignore and show toast below
+                }.onFailure {
+                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
                 }
+            } else {
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             }
-            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
         }
     }
 }

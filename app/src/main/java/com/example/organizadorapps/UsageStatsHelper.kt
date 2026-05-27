@@ -10,8 +10,10 @@ import android.os.Build
 import android.os.Process
 import android.provider.Settings
 import com.example.organizadorapps.data.dao.AppUsageSnapshotDao
+import com.example.organizadorapps.data.dao.AppUsageDailyDao
 import com.example.organizadorapps.data.entity.AppLaunchEntity
 import com.example.organizadorapps.data.entity.AppUsageSnapshotEntity
+import com.example.organizadorapps.data.entity.AppUsageDailyEntity
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -215,6 +217,210 @@ object UsageStatsHelper {
         )
     }
 
+
+    fun getLastThreeMonthsCurveForApp(
+        context: Context,
+        app: InstalledApp
+    ): UsageCurveResult {
+        val days = 90
+        val calendar = Calendar.getInstance()
+        val currentEnd = endOfDay(calendar.timeInMillis)
+
+        calendar.timeInMillis = currentEnd
+        calendar.add(Calendar.DAY_OF_YEAR, -(days - 1))
+        val currentStart = startOfDay(calendar.timeInMillis)
+
+        calendar.timeInMillis = currentStart
+        calendar.add(Calendar.DAY_OF_YEAR, -days)
+        val previousStart = startOfDay(calendar.timeInMillis)
+        val previousEnd = currentStart - 1L
+
+        val currentMap: Map<String, Long>
+        val previousMap: Map<String, Long>
+        val sourceLabel: String
+        val valueLabel: String
+        val isDuration: Boolean
+
+        if (hasUsageStatsPermission(context)) {
+            currentMap = getDailyUsageForApp(context, app, currentStart, currentEnd)
+            previousMap = getDailyUsageForApp(context, app, previousStart, previousEnd)
+            sourceLabel = "Tiempo real del sistema"
+            valueLabel = "Tiempo de uso"
+            isDuration = true
+
+            runCatching {
+                val dao = AppUsageDailyDao(context)
+                val now = System.currentTimeMillis()
+                dao.upsertDailyUsage(
+                    currentMap.map { (date, value) ->
+                        AppUsageDailyEntity(
+                            packageName = app.packageName,
+                            appName = app.name,
+                            usageDate = date,
+                            totalUsageMs = value,
+                            openCount = 0,
+                            source = AppUsageDailyEntity.SOURCE_SYSTEM,
+                            updatedAt = now
+                        )
+                    }
+                )
+            }
+        } else {
+            currentMap = com.example.organizadorapps.data.dao.AppLaunchDao(context)
+                .getDailyLaunchCounts(app.packageName, currentStart, currentEnd)
+            previousMap = com.example.organizadorapps.data.dao.AppLaunchDao(context)
+                .getDailyLaunchCounts(app.packageName, previousStart, previousEnd)
+            sourceLabel = "Aperturas desde el organizador"
+            valueLabel = "Aperturas"
+            isDuration = false
+        }
+
+        val currentDates = dateKeys(currentStart, currentEnd)
+        val previousDates = dateKeys(previousStart, previousEnd)
+        val formatter = SimpleDateFormat("dd/MM", Locale.getDefault())
+
+        val points = currentDates.mapIndexed { index, currentDate ->
+            val previousDate = previousDates.getOrNull(index)
+            UsageCurvePoint(
+                label = runCatching {
+                    val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(currentDate)
+                    formatter.format(parsed!!)
+                }.getOrDefault(currentDate.substring(5)),
+                currentValue = currentMap[currentDate] ?: 0L,
+                previousValue = previousDate?.let { previousMap[it] } ?: 0L
+            )
+        }.trimLeadingEmptyPoints()
+
+        return UsageCurveResult(
+            points = points,
+            sourceLabel = sourceLabel,
+            valueLabel = valueLabel,
+            currentTotal = points.sumOf { it.currentValue },
+            previousTotal = points.sumOf { it.previousValue },
+            isDuration = isDuration
+        )
+    }
+
+    fun getDailyUsageForApp(
+        context: Context,
+        app: InstalledApp,
+        startMillis: Long,
+        endMillis: Long
+    ): Map<String, Long> {
+        if (!hasUsageStatsPermission(context)) return emptyMap()
+
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val events = usageStatsManager.queryEvents(startMillis, endMillis)
+        val event = UsageEvents.Event()
+        val result = linkedMapOf<String, Long>()
+        var foregroundStart: Long? = null
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.packageName != app.packageName) continue
+
+            when {
+                isForegroundEvent(event) -> {
+                    foregroundStart = event.timeStamp.coerceAtLeast(startMillis)
+                }
+
+                isBackgroundEvent(event) -> {
+                    val start = foregroundStart
+                    if (start != null) {
+                        addDurationByDay(
+                            target = result,
+                            startMillis = start,
+                            endMillis = event.timeStamp.coerceAtMost(endMillis)
+                        )
+                        foregroundStart = null
+                    }
+                }
+            }
+        }
+
+        foregroundStart?.let { start ->
+            addDurationByDay(
+                target = result,
+                startMillis = start,
+                endMillis = System.currentTimeMillis().coerceAtMost(endMillis)
+            )
+        }
+
+        return result
+    }
+
+    private fun isForegroundEvent(event: UsageEvents.Event): Boolean {
+        return event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                        event.eventType == UsageEvents.Event.ACTIVITY_RESUMED)
+    }
+
+    private fun isBackgroundEvent(event: UsageEvents.Event): Boolean {
+        return event.eventType == UsageEvents.Event.MOVE_TO_BACKGROUND ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                        event.eventType == UsageEvents.Event.ACTIVITY_PAUSED)
+    }
+
+    private fun addDurationByDay(
+        target: MutableMap<String, Long>,
+        startMillis: Long,
+        endMillis: Long
+    ) {
+        if (endMillis <= startMillis) return
+
+        var cursor = startMillis
+        while (cursor < endMillis) {
+            val dayEnd = endOfDay(cursor)
+            val segmentEnd = minOf(dayEnd, endMillis)
+            val key = dateKey(cursor)
+            target[key] = (target[key] ?: 0L) + (segmentEnd - cursor)
+            cursor = segmentEnd + 1L
+        }
+    }
+
+    private fun dateKeys(startMillis: Long, endMillis: Long): List<String> {
+        val result = mutableListOf<String>()
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = startOfDay(startMillis)
+        }
+
+        while (calendar.timeInMillis <= endMillis) {
+            result.add(dateKey(calendar.timeInMillis))
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        return result
+    }
+
+    private fun List<UsageCurvePoint>.trimLeadingEmptyPoints(): List<UsageCurvePoint> {
+        val firstDataIndex = indexOfFirst { it.currentValue > 0L || it.previousValue > 0L }
+        return if (firstDataIndex <= 0) this else drop(firstDataIndex)
+    }
+
+    private fun dateKey(timeMillis: Long): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(timeMillis)
+    }
+
+    private fun startOfDay(timeMillis: Long): Long {
+        return Calendar.getInstance().apply {
+            timeInMillis = timeMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+
+    private fun endOfDay(timeMillis: Long): Long {
+        return Calendar.getInstance().apply {
+            timeInMillis = timeMillis
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
+    }
+
     fun formatDuration(ms: Long): String {
         val totalMinutes = (ms / 60000L).toInt()
         val hours = totalMinutes / 60
@@ -401,3 +607,4 @@ object UsageStatsHelper {
             .orEmpty()
     }
 }
+
